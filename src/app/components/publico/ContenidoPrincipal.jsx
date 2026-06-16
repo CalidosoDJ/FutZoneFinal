@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export default function ContenidoPrincipal() {
-
+  
   return (
     <section
       className="min-h-screen bg-cover bg-center flex items-center "

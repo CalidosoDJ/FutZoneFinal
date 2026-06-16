@@ -2,21 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FaFacebook, FaTwitter } from "react-icons/fa"
+import { FcGoogle } from "react-icons/fc";
 
 export default function RegisterForm() {
 
     const router = useRouter();
 
     const [nombre, setNombre] = useState("");
+    const [usuario, setUsuario] = useState("");
+    const [celular, setCelular] = useState("");
     const [correo, setCorreo] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     const registrarUsuario = (e) => {
 
         e.preventDefault();
 
+        if (password !== confirmPassword) {
+            alert("Las contraseñas no coinciden");
+            return
+        }
+
         const usuario = {
             nombre,
+            usuario,
+            celular,
             correo,
             password,
         };
@@ -38,93 +50,138 @@ export default function RegisterForm() {
         <section className="min-h-screen flex bg-black">
 
             {/* FORMULARIO */}
-            <div className="w-full lg:w-[40%] bg-gray-950 flex items-center justify-center p-8">
+            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center p-3">
 
                 <form
                     onSubmit={registrarUsuario}
                     className="w-full max-w-md"
                 >
 
-                    {/* Logo */}
-                    <div className="mb-10">
+                    <div className="mb-2">
 
-                        <h1 className="text-5xl font-bold text-white mb-3">
-                            Fut<span className="text-green-500">Zone</span>
+                        <h1 className="text-5xl font-bold text-gray-900">
+                            Fut<span className="text-green-600">Zone</span>
                         </h1>
 
-                        <p className="text-gray-400">
-                            Crea tu cuenta y empieza a reservar
+                        <p className="text-black mt-3 text-xl">
+                            Únete a la comunidad futbolera
                         </p>
 
                     </div>
 
-                    {/* Nombre */}
-                    <div className="mb-5">
-
-                        <label className="text-white block mb-2">
-                            Nombre
-                        </label>
+                    <div className="space-y-4">
 
                         <input
                             type="text"
-                            placeholder="Juan Pérez"
+                            placeholder="Ingrese su Nombre Completo"
                             value={nombre}
                             onChange={(e) => setNombre(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-800 text-white p-4 rounded-2xl outline-none focus:border-green-500 transition"
+                            className="w-full p-2 rounded-xl border border-dark focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
                         />
 
-                    </div>
-
-                    {/* Correo */}
-                    <div className="mb-5">
-
-                        <label className="text-white block mb-2">
-                            Correo
-                        </label>
+                        <input
+                            type="text"
+                            placeholder="Ingrese su Nombre de Usuario"
+                            value={usuario}
+                            onChange={(e) => setUsuario(e.target.value)}
+                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
+                        />
 
                         <input
                             type="email"
-                            placeholder="correo@gmail.com"
+                            placeholder="Ingrese su Correo electrónico"
                             value={correo}
                             onChange={(e) => setCorreo(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-800 text-white p-4 rounded-2xl outline-none focus:border-green-500 transition"
+                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
                         />
 
-                    </div>
-
-                    {/* Contraseña */}
-                    <div className="mb-8">
-
-                        <label className="text-white block mb-2">
-                            Contraseña
-                        </label>
+                        <input
+                            type="tel"
+                            placeholder="Numero Celular"
+                            value={celular}
+                            onChange={(e) => setCelular(e.target.value)}
+                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
+                        />
 
                         <input
                             type="password"
-                            placeholder="********"
+                            placeholder="Contraseña"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-800 text-white p-4 rounded-2xl outline-none focus:border-green-500 transition"
+                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
+                        />
+
+                        <input
+                            type="password"
+                            placeholder="Confirmar contraseña"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            required
                         />
 
                     </div>
 
-                    {/* Botón */}
                     <button
                         type="submit"
-                        className="w-full bg-green-600 hover:bg-green-700 transition text-white p-4 rounded-2xl text-lg font-semibold"
+                        className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-semibold transition"
                     >
                         Registrarse
                     </button>
 
-                    {/* Login */}
-                    <p className="text-gray-400 mt-6 text-center">
+                    {/* Separador */}
 
-                        ¿Ya tienes cuenta?{" "}
+                    <div className="flex items-center my-5">
+
+                        <div className="flex-1 border-t border-black"></div>
+
+                        <span className="px-4 text-black text-sm">
+                            o continúa con
+                        </span>
+
+                        <div className="flex-1 border-t border-black"></div>
+
+                    </div>
+
+                    {/* Redes Sociales */}
+
+                    <div className="grid grid-cols-3 gap-3">
+
+                        <button
+                            type="button"
+                            className="flex justify-center items-center p-4 border rounded-xl bg-blue-700 hover:bg-blue-600 transition"
+                        >
+                            <FaFacebook size={22} />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="flex justify-center items-center p-4 border bg-gray-300 rounded-2xl hover:bg-gray-400 transition"
+                        >
+                            <FcGoogle size={22} />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="flex justify-center items-center p-4 border bg-black rounded-xl hover:bg-gray-800 transition"
+                        >
+                            <FaTwitter size={22} />
+                        </button>
+
+                    </div>
+
+                    <p className="text-center text-gray-500 mt-6">
+
+                        ¿Ya tienes cuenta?
 
                         <span
                             onClick={() => router.push("/login")}
-                            className="text-green-500 cursor-pointer hover:text-green-400"
+                            className="text-green-600 font-semibold cursor-pointer ml-2"
                         >
                             Inicia sesión
                         </span>
@@ -139,7 +196,7 @@ export default function RegisterForm() {
             <div
                 className="hidden lg:flex lg:w-[60%] bg-cover bg-center relative"
                 style={{
-                    backgroundImage: "url('/images/register.jpg')",
+                    backgroundImage: "url('/images/registrarse.jpg')",
                 }}
             >
 
@@ -147,7 +204,7 @@ export default function RegisterForm() {
                 <div className="absolute inset-0 bg-black/50"></div>
 
                 {/* Texto */}
-                <div className="relative z-10 flex flex-col justify-end p-16 text-white">
+                <div className="relative z-10 flex flex-col p-16 text-white">
 
                     <h1 className="text-6xl font-bold mb-5 leading-tight">
 

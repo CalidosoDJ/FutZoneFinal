@@ -39,7 +39,7 @@ export default function LoginComponent() {
         <section className="min-h-screen flex bg-black">
 
             {/* FORMULARIO */}
-            <div className="w-full lg:w-[40%] bg-gray-950 flex items-center justify-center p-8">
+            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center p-8">
 
                 <form
                     onSubmit={iniciarSesion}
@@ -49,29 +49,29 @@ export default function LoginComponent() {
                     {/* Logo */}
                     <div className="mb-10">
 
-                        <h1 className="text-5xl font-bold text-white mb-3">
+                        <h1 className="text-5xl font-bold text-gray-900 mb-3">
                             Fut<span className="text-green-500">Zone</span>
                         </h1>
 
-                        <p className="text-gray-400">
+                        <p className="text-black text-xl">
                             Inicia sesión para continuar
                         </p>
 
                     </div>
 
                     {/* Correo */}
-                    <div className="mb-5">
+                    <div className="mb-1">
 
-                        <label className="text-white block mb-2">
+                        <label className="text-black block mb-2">
                             Correo
                         </label>
 
                         <input
                             type="email"
-                            placeholder="correo@gmail.com"
+                            placeholder="Ingrese su Correo Electrónico"
                             value={correo}
                             onChange={(e) => setCorreo(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-800 text-white p-4 rounded-2xl outline-none focus:border-green-500 transition"
+                            className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
                         />
 
                     </div>
@@ -85,10 +85,10 @@ export default function LoginComponent() {
 
                         <input
                             type="password"
-                            placeholder="********"
+                            placeholder="Ingrese su Contraseña"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-800 text-white p-4 rounded-2xl outline-none focus:border-green-500 transition"
+                            className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
                         />
 
                     </div>
@@ -123,7 +123,7 @@ export default function LoginComponent() {
             <div
                 className="hidden lg:flex lg:w-[60%] bg-cover bg-center relative"
                 style={{
-                    backgroundImage: "url('/images/login.jpg')",
+                    backgroundImage: "url('/images/login3.avif')",
                 }}
             >
 

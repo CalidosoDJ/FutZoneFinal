@@ -81,7 +81,7 @@ export default function Footer() {
                 <img alt="Instagram" src="/icons/instagram.png" className="w-8" />
               </button>
 
-              <button className="bg-gray-800 hover:bg-sky-500 transition p-4 rounded-2xl text-2xl">
+              <button className="bg-gray-800 hover:bg-black transition p-4 rounded-2xl text-2xl">
                 <img alt="Twitter" src="/icons/twiter.png" className="w-8" />
               </button>
 
