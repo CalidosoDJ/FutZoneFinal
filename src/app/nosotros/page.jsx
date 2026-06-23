@@ -8,7 +8,7 @@ export default function NosotrosPage() {
         <main className="bg-slate-100 min-h-screen">
 
             {/* HERO */}
-            <section className="bg-gray-950 text-white py-15">
+            <section className="bg-gray-900 text-white py-15">
 
                 <div className="max-w-6xl mx-auto px-6 text-center">
 

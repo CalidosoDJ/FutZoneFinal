@@ -22,10 +22,35 @@ export default function RegisterForm() {
 
         if (password !== confirmPassword) {
             alert("Las contraseñas no coinciden");
-            return
+            return;
         }
 
-        const usuario = {
+        // Obtener usuarios existentes
+        const usuarios =
+            JSON.parse(localStorage.getItem("usuarios")) || [];
+
+        // Validar correo repetido
+        const existeCorreo = usuarios.find(
+            (u) => u.correo === correo
+        );
+
+        if (existeCorreo) {
+            alert("Este correo ya está registrado");
+            return;
+        }
+
+        // Validar usuario repetido
+        const existeUsuario = usuarios.find(
+            (u) => u.usuario === usuario
+        );
+
+        if (existeUsuario) {
+            alert("Este nombre de usuario ya existe");
+            return;
+        }
+
+        const nuevoUsuario = {
+            id: Date.now(),
             nombre,
             usuario,
             celular,
@@ -33,16 +58,16 @@ export default function RegisterForm() {
             password,
         };
 
-        // Guardar usuario
+        usuarios.push(nuevoUsuario);
+
         localStorage.setItem(
-            "usuario",
-            JSON.stringify(usuario)
+            "usuarios",
+            JSON.stringify(usuarios)
         );
 
         alert("Usuario registrado correctamente");
 
         router.push("/login");
-
     };
 
     return (

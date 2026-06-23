@@ -14,21 +14,27 @@ export default function LoginComponent() {
 
         e.preventDefault();
 
-        const usuarioGuardado = JSON.parse(
-            localStorage.getItem("usuario")
+        const usuarios =
+            JSON.parse(localStorage.getItem("usuarios")) || [];
+
+        const usuarioEncontrado = usuarios.find(
+            (u) =>
+                u.correo === correo &&
+                u.password === password
         );
 
-        if (
-            usuarioGuardado &&
-            correo === usuarioGuardado.correo &&
-            password === usuarioGuardado.password
-        ) {
+        if (usuarioEncontrado) {
+
+            localStorage.setItem(
+                "usuarioLogueado",
+                JSON.stringify(usuarioEncontrado)
+            );
 
             router.push("/dashboard");
 
         } else {
 
-            alert("Credenciales incorrectas");
+            alert("Correo o contraseña incorrectos");
 
         }
 
