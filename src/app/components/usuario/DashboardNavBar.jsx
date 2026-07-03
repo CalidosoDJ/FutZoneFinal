@@ -80,7 +80,7 @@ export default function DashboardNavbar() {
                     </button>
 
                     <button
-                        onClick={() => router.push("/dashboard/canchas")}
+                        onClick={() => router.push("/canchas")}
                         className="hover:text-green-500 transition"
                     >
                        Canchas
