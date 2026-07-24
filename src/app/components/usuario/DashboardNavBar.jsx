@@ -3,7 +3,7 @@
 import { Bell, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 export default function DashboardNavbar() {
 
     const router = useRouter();
@@ -27,6 +27,23 @@ export default function DashboardNavbar() {
         router.push("/login");
 
     };
+    const [sinLeer, setSinLeer] = useState(0);
+
+    useEffect(() => {
+
+        const datos = localStorage.getItem("notificacionesJugador");
+
+        if (datos) {
+
+            const lista = JSON.parse(datos);
+
+            setSinLeer(
+                lista.filter(item => !item.leida).length
+            );
+
+        }
+
+    }, []);
 
     return (
 
@@ -76,14 +93,14 @@ export default function DashboardNavbar() {
                         onClick={() => router.push("/dashboard/reservas")}
                         className="hover:text-green-500 transition"
                     >
-                       Mis Reservas
+                        Mis Reservas
                     </button>
 
                     <button
                         onClick={() => router.push("/canchas")}
                         className="hover:text-green-500 transition"
                     >
-                       Canchas
+                        Canchas
                     </button>
 
                     <button
@@ -101,32 +118,42 @@ export default function DashboardNavbar() {
 
                     {/* Notificaciones */}
 
-                    <div className="relative cursor-pointer">
+                    <Link href="/notificaciones">
 
-                        <Bell
-                            size={24}
-                            className="hover:text-green-500 transition"
-                        />
+                        <div className="relative cursor-pointer">
 
-                        <span
-                            className="
-                            absolute
-                            -top-2
-                            -right-2
-                            bg-red-500
-                            text-xs
-                            w-5
-                            h-5
-                            rounded-full
-                            flex
-                            items-center
-                            justify-center
-                            "
-                        >
-                            3
-                        </span>
+                            <Bell
+                                size={24}
+                                className="hover:text-green-500 transition"
+                            />
 
-                    </div>
+                            {sinLeer > 0 && (
+
+                                <span
+                                    className="
+                absolute
+                -top-2
+                -right-2
+                bg-red-500
+                text-white
+                text-xs
+                font-bold
+                w-5
+                h-5
+                rounded-full
+                flex
+                items-center
+                justify-center
+                "
+                                >
+                                    {sinLeer}
+                                </span>
+
+                            )}
+
+                        </div>
+
+                    </Link>
 
                     {/* Avatar */}
 
