@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginComponent() {
@@ -10,32 +10,58 @@ export default function LoginComponent() {
     const [correo, setCorreo] = useState("");
     const [password, setPassword] = useState("");
 
+    //rol admin
+    useEffect(() => {
+
+    const adminExiste = localStorage.getItem("admin");
+
+    if (!adminExiste) {
+
+        const admin = {
+            nombre: "Administrador",
+            usuario: "admin",
+            celular: "3106021273",
+            correo: "admin@futzone.com",
+            password: "admin123",
+            rol: "admin"
+        };
+
+        localStorage.setItem("admin", JSON.stringify(admin));
+    }
+
+}, []);
+
     const iniciarSesion = (e) => {
 
         e.preventDefault();
 
-        const usuarios =
-            JSON.parse(localStorage.getItem("usuarios")) || [];
+        const admin = JSON.parse(localStorage.getItem("admin"));
+
+        if (
+            admin && 
+            admin.correo === correo &&
+            admin.password === password
+        ) {
+            localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
+
+            router.push("/admin");
+            return;
+        }
+
+        const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
 
         const usuarioEncontrado = usuarios.find(
-            (u) =>
-                u.correo === correo &&
-                u.password === password
+            (u) => u.correo === correo && u.password === password
         );
-
         if (usuarioEncontrado) {
-
             localStorage.setItem(
                 "usuarioLogueado",
                 JSON.stringify(usuarioEncontrado)
             );
-
             router.push("/dashboard");
 
         } else {
-
             alert("Correo o contraseña incorrectos");
-
         }
 
     };

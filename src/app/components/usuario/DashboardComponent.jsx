@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DashboardNavbar from "@/app/components/usuario/DashboardNavBar";
 
 export default function DashboardComponent() {
 
@@ -20,8 +19,6 @@ export default function DashboardComponent() {
     return (
 
         <div className="min-h-screen bg-slate-100">
-
-            <DashboardNavbar />
 
             <div className="max-w-7xl mx-auto p-8">
 
