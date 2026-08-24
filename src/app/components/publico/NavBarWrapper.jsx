@@ -1,18 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import NavBar from "./NavBar";
+import DashboardNavbar from "../usuario/DashboardNavBar";
+
 
 export default function NavBarWrapper() {
-  const pathname = usePathname();
+    const pathname = usePathname();
 
-  const rutasOcultas = ["/login", "/register", "/", "/dashboard"];
+    const rutasOcultas = [
+        "/",
+        "/login",
+      
+        "/register",
+    ];
 
-  if (rutasOcultas.includes(pathname)) {
-    return null;
-  }
+    if (rutasOcultas.includes(pathname)) {
+        return null;
+    }
 
-  return <NavBar />;
+    return <DashboardNavbar />;
 }
-
-// Este componente es para envolver el NavBar y ocultarlo en ciertas rutas como login y register

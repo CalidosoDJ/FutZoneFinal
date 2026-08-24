@@ -4,6 +4,8 @@ import { Bell, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+
 export default function DashboardNavbar() {
 
     const router = useRouter();
@@ -90,11 +92,14 @@ export default function DashboardNavbar() {
                     </button>
 
                     <button
-                        onClick={() => router.push("/dashboard/reservas")}
+                        onClick={() => router.push("/mis-reservas")}
                         className="hover:text-green-500 transition"
                     >
                         Mis Reservas
                     </button>
+
+
+                    
 
                     <button
                         onClick={() => router.push("/canchas")}
@@ -104,12 +109,21 @@ export default function DashboardNavbar() {
                     </button>
 
                     <button
-                        onClick={() => router.push("/dashboard/perfil")}
+                        onClick={() => router.push("/mapa")}
+                        className="hover:text-green-500 transition"
+                    >
+                        Mapa
+                    </button>
+
+
+                    <button
+                        onClick={() => router.push("/perfil")}
                         className="hover:text-green-500 transition"
                     >
                         Mi Perfil
                     </button>
 
+                    
                 </div>
 
                 {/* Usuario */}

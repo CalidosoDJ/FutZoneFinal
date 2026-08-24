@@ -34,7 +34,7 @@ export default function ContenidoPrincipal() {
           <div className="flex gap-5">
 
             <Link
-              href="/mis-canchas"
+              href="/login"
               className="bg-green-700 hover:bg-green-600 transition px-8 py-3 rounded-xl text-lg"
             >
               Ver Canchas

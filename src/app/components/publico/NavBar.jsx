@@ -27,41 +27,9 @@ export default function NavBar() {
       {/* Menú */}
       <ul className="hidden md:flex items-center gap-10 text-lg font-medium">
 
-        <li>
-          <Link
-            href="/"
-            className="hover:text-green-500 transition duration-300"
-          >
-            Inicio
-          </Link>
-        </li>
+        
 
-        <li>
-          <Link
-            href="/canchas"
-            className="hover:text-green-500 transition duration-300"
-          >
-            Canchas
-          </Link>
-        </li>
 
-        <li>
-          <Link
-            href="/ubicacion"
-            className="hover:text-green-500 transition duration-300"
-          >
-            Ubicación
-          </Link>
-        </li>
-
-        <li>
-          <Link
-            href="/nosotros"
-            className="hover:text-green-500 transition duration-300"
-          >
-            Nosotros
-          </Link>
-        </li>
 
       </ul>
 

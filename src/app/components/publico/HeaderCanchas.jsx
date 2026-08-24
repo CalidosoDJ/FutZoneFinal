@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Bell, UserCircle2, MapPin, Star, Car, Coffee } from "lucide-react";
-import DashboardNavbar from "../usuario/DashboardNavBar";
 
 export default function HeaderCanchas() {
     return (
@@ -20,7 +19,7 @@ export default function HeaderCanchas() {
             {/* Oscurecer */}
 
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-green-900/60" />
-            <DashboardNavbar />
+            
 
             {/* Navbar */}
 

@@ -5,7 +5,7 @@ import DashboardNavbar from "../components/usuario/DashboardNavBar";
 export default function Page() {
     return (
         <>
-            <DashboardNavbar />
+            
             <div className="min-h-screen bg-slate-100 py-10">
 
 

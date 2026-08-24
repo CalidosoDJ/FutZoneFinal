@@ -12,33 +12,56 @@ export default function LoginComponent() {
 
     const iniciarSesion = (e) => {
 
-        e.preventDefault();
+    e.preventDefault();
 
-        const usuarios =
-            JSON.parse(localStorage.getItem("usuarios")) || [];
+    // LOGIN DEL ÁRBITRO
+    if (
+        correo === "arbitro@futzone.com" &&
+        password === "123"
+    ) {
 
-        const usuarioEncontrado = usuarios.find(
-            (u) =>
-                u.correo === correo &&
-                u.password === password
+        const arbitro = {
+            nombre: "Árbitro FutZone",
+            correo: "arbitro@futzone.com",
+            rol: "arbitro",
+        };
+
+        localStorage.setItem(
+            "usuarioLogueado",
+            JSON.stringify(arbitro)
         );
 
-        if (usuarioEncontrado) {
+        router.push("/arbitro/dashboard");
 
-            localStorage.setItem(
-                "usuarioLogueado",
-                JSON.stringify(usuarioEncontrado)
-            );
+        return;
+    }
 
-            router.push("/dashboard");
+    // LOGIN DE LOS USUARIOS REGISTRADOS
+    const usuarios =
+        JSON.parse(localStorage.getItem("usuarios")) || [];
 
-        } else {
+    const usuarioEncontrado = usuarios.find(
+        (u) =>
+            u.correo === correo &&
+            u.password === password
+    );
 
-            alert("Correo o contraseña incorrectos");
+    if (usuarioEncontrado) {
 
-        }
+        localStorage.setItem(
+            "usuarioLogueado",
+            JSON.stringify(usuarioEncontrado)
+        );
 
-    };
+        router.push("/dashboard");
+
+    } else {
+
+        alert("Correo o contraseña incorrectos");
+
+    }
+
+};
 
     return (
 

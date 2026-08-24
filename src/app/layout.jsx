@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
+
 import "./globals.css";
-import NavBarWrapper from "@/app/components/publico/NavBarWrapper";
+
+import LayoutWrapper from "./components/LayoutWrapper";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,25 +15,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+
 export const metadata = {
   title: "FutZone",
-  description: "Bienvenido a FutZone, tu destino para todo lo relacionado con el fútbol",
+  description: "Bienvenido a FutZone",
 };
 
+
 export default function RootLayout({ children }) {
+
   return (
+
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+
       <body className="min-h-full flex flex-col">
-        
-        
-         <main className="flex-1">
+
+        <LayoutWrapper>
+
           {children}
-        </main>
+
+        </LayoutWrapper>
 
       </body>
+
     </html>
+
   );
+
 }
