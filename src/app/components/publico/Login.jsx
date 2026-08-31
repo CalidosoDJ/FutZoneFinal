@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginComponent() {
@@ -10,58 +10,108 @@ export default function LoginComponent() {
     const [correo, setCorreo] = useState("");
     const [password, setPassword] = useState("");
 
+    //rol admin
+    useEffect(() => {
+
+        const adminExiste = localStorage.getItem("admin");
+
+        if (!adminExiste) {
+
+            const admin = {
+                nombre: "Administrador",
+                usuario: "admin",
+                celular: "3106021273",
+                correo: "admin@futzone.com",
+                password: "admin123",
+                rol: "admin"
+            };
+
+            localStorage.setItem("admin", JSON.stringify(admin));
+        }
+
+    }, []);
+
     const iniciarSesion = (e) => {
 
-    e.preventDefault();
+        e.preventDefault();
 
-    // LOGIN DEL ÁRBITRO
-    if (
-        correo === "arbitro@futzone.com" &&
-        password === "123"
-    ) {
+        // LOGIN DEL ÁRBITRO
+        if (
+            correo === "arbitro@futzone.com" &&
+            password === "123"
+        ) {
 
-        const arbitro = {
-            nombre: "Árbitro FutZone",
-            correo: "arbitro@futzone.com",
-            rol: "arbitro",
-        };
+            const arbitro = {
+                nombre: "Árbitro FutZone",
+                correo: "arbitro@futzone.com",
+                rol: "arbitro",
+            };
 
-        localStorage.setItem(
-            "usuarioLogueado",
-            JSON.stringify(arbitro)
+            localStorage.setItem(
+                "usuarioLogueado",
+                JSON.stringify(arbitro)
+            );
+
+            router.push("/arbitro/dashboard");
+
+            return;
+        }
+
+        // LOGIN DE LOS USUARIOS REGISTRADOS
+        const usuarios =
+            JSON.parse(localStorage.getItem("usuarios")) || [];
+
+        const usuarioEncontrado = usuarios.find(
+            (u) =>
+                u.correo === correo &&
+                u.password === password
         );
 
-        router.push("/arbitro/dashboard");
+        if (usuarioEncontrado) {
 
-        return;
-    }
+            localStorage.setItem(
+                "usuarioLogueado",
+                JSON.stringify(usuarioEncontrado)
+            );
 
-    // LOGIN DE LOS USUARIOS REGISTRADOS
-    const usuarios =
-        JSON.parse(localStorage.getItem("usuarios")) || [];
+            const admin = JSON.parse(localStorage.getItem("admin"));
 
-    const usuarioEncontrado = usuarios.find(
-        (u) =>
-            u.correo === correo &&
-            u.password === password
-    );
+            if (
+                admin &&
+                admin.correo === correo &&
+                admin.password === password
+            ) {
+                localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
 
-    if (usuarioEncontrado) {
+                router.push("/admin");
+                return;
+            }
 
-        localStorage.setItem(
-            "usuarioLogueado",
-            JSON.stringify(usuarioEncontrado)
-        );
+            const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
 
-        router.push("/dashboard");
+            const usuarioEncontrado = usuarios.find(
+                (u) => u.correo === correo && u.password === password
+            );
+            if (usuarioEncontrado) {
+                localStorage.setItem(
+                    "usuarioLogueado",
+                    JSON.stringify(usuarioEncontrado)
+                );
+                router.push("/dashboard");
 
-    } else {
+            } else {
+                alert("Correo o contraseña incorrectos");
+            }
 
-        alert("Correo o contraseña incorrectos");
+            router.push("/dashboard");
 
-    }
+        } else {
 
-};
+            alert("Correo o contraseña incorrectos");
+
+        }
+
+    };
 
     return (
 

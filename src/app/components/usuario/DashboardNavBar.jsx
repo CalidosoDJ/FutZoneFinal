@@ -3,13 +3,11 @@
 import { Bell, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-
+import Image from "next/image";
 
 export default function DashboardNavbar() {
 
     const router = useRouter();
-
     const [usuario, setUsuario] = useState(null);
 
     useEffect(() => {
@@ -49,35 +47,26 @@ export default function DashboardNavbar() {
 
     return (
 
-        <nav
-            className="
-            sticky
-            top-0
-            z-50
-            bg-gray-950
-            text-white
-            px-8
-            py-4
-            shadow-lg
-            "
-        >
+        <nav className="sticky top-0 z-50 bg-gray-950 text-white px-10 py-4 shadow-lg">
 
             <div className="flex justify-between items-center ">
 
                 {/* Logo */}
 
-                <div
-                    onClick={() => router.push("/dashboard")}
-                    className="cursor-pointer"
-                >
+                <div className="flex items-center gap-3 cursor-pointer">
+
+                    <Image
+                        src="/icons/futzone logo.jpeg"
+                        alt="Logo FutZone"
+                        width={50}
+                        height={50}
+                        className="object-contain rounded-full"
+                    />
+
                     <h1 className="text-3xl font-bold">
-
-                        Fut
-                        <span className="text-green-500">
-                            Zone
-                        </span>
-
+                        Fut<span className="text-green-500">Zone</span>
                     </h1>
+
                 </div>
 
                 {/* Menú */}
@@ -99,7 +88,7 @@ export default function DashboardNavbar() {
                     </button>
 
 
-                    
+
 
                     <button
                         onClick={() => router.push("/canchas")}
@@ -123,7 +112,7 @@ export default function DashboardNavbar() {
                         Mi Perfil
                     </button>
 
-                    
+
                 </div>
 
                 {/* Usuario */}
