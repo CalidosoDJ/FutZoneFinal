@@ -40,9 +40,7 @@ export default function ReservasComponent() {
     const guardarReserva = () => {
 
         const nuevas = [...reservas, formulario];
-
         setReservas(nuevas);
-
         localStorage.setItem(
             "reservas",
             JSON.stringify(nuevas)
@@ -208,11 +206,9 @@ export default function ReservasComponent() {
                         {reservas
 
                             .filter((r) =>
-
-                                r.cliente
+                                String(r.cliente || "")
                                     .toLowerCase()
                                     .includes(busqueda.toLowerCase())
-
                             )
 
                             .map((r) => (
@@ -222,13 +218,13 @@ export default function ReservasComponent() {
                                     className="border-b hover:bg-green-50 transition duration-200"
                                 >
 
-                                    <td className="p-4">{r.cliente}</td>
+                                    <td className="p-4">{r.cliente || "Sin cliente"}</td>
 
-                                    <td>{r.cancha}</td>
+                                    <td>{r.cancha || "Sin cancha"}</td>
 
-                                    <td>{r.fecha}</td>
+                                    <td>{r.fecha || "Sin fecha"}</td>
 
-                                    <td>{r.hora}</td>
+                                    <td>{r.hora || "Sin hora"}</td>
 
                                     <td className="font-bold text-green-600">
                                         $

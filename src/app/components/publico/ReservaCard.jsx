@@ -196,7 +196,7 @@ export default function ReservaCard() {
                                     </span>
 
                                     <span className="font-semibold text-gray-800">
-                                        ${r.precio.toLocaleString("es-CO")}
+                                        ${(Number(r.precio) || 0).toLocaleString("es-CO")}
                                     </span>
                                 </div>
 
@@ -237,7 +237,7 @@ export default function ReservaCard() {
                                     <span className="text-green-600">
 
                                         ${(
-                                            r.precio +
+                                            (Number(r.precio) || 0) +
                                             (r.requiereArbitro ? 50000 : 0)
                                         ).toLocaleString("es-CO")}
 

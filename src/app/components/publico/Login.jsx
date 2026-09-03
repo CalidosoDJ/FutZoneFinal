@@ -33,7 +33,26 @@ export default function LoginComponent() {
 
     const iniciarSesion = (e) => {
 
+
         e.preventDefault();
+
+        // LOGIN DEL ADMINISTRADOR
+        const admin = JSON.parse(localStorage.getItem("admin"));
+
+        if (
+            admin &&
+            admin.correo === correo &&
+            admin.password === password
+        ) {
+            localStorage.setItem(
+                "usuarioLogueado",
+                JSON.stringify(admin)
+            );
+
+            router.push("/admin");
+            return;
+        }
+
 
         // LOGIN DEL ÁRBITRO
         if (
@@ -53,11 +72,11 @@ export default function LoginComponent() {
             );
 
             router.push("/arbitro/dashboard");
-
             return;
         }
 
-        // LOGIN DE LOS USUARIOS REGISTRADOS
+
+        // LOGIN DE USUARIOS REGISTRADOS
         const usuarios =
             JSON.parse(localStorage.getItem("usuarios")) || [];
 
@@ -74,44 +93,16 @@ export default function LoginComponent() {
                 JSON.stringify(usuarioEncontrado)
             );
 
-            const admin = JSON.parse(localStorage.getItem("admin"));
-
-            if (
-                admin &&
-                admin.correo === correo &&
-                admin.password === password
-            ) {
-                localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
-
-                router.push("/admin");
-                return;
-            }
-
-            const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
-
-            const usuarioEncontrado = usuarios.find(
-                (u) => u.correo === correo && u.password === password
-            );
-            if (usuarioEncontrado) {
-                localStorage.setItem(
-                    "usuarioLogueado",
-                    JSON.stringify(usuarioEncontrado)
-                );
-                router.push("/dashboard");
-
-            } else {
-                alert("Correo o contraseña incorrectos");
-            }
-
             router.push("/dashboard");
-
-        } else {
-
-            alert("Correo o contraseña incorrectos");
-
+            return;
         }
 
+
+        // SI NO COINCIDE NINGÚN USUARIO
+        alert("Correo o contraseña incorrectos");
+
     };
+
 
     return (
 
