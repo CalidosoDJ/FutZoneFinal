@@ -142,6 +142,37 @@ export default function ReservaCancha({ cancha }) {
 
     }, []);
 
+    // CREAR NOTIFICACIÓN PARA EL ADMIN
+    const notificaciones =
+        JSON.parse(
+            localStorage.getItem("notificaciones")
+        ) || [];
+
+    const nuevaNotificacion = {
+        id: Date.now(),
+        tipo: "reserva",
+        titulo: "Nueva reserva",
+        mensaje: `Se ha realizado una nueva reserva de cancha.`,
+        tiempo: "Hace unos segundos",
+        icono: "CalendarCheck",
+        leida: false
+    };
+
+    const nuevasNotificaciones = [
+        nuevaNotificacion,
+        ...notificaciones
+    ];
+
+    localStorage.setItem(
+        "notificaciones",
+        JSON.stringify(nuevasNotificaciones)
+    );
+
+    // Avisar al Navbar que hay una nueva notificación
+    window.dispatchEvent(
+        new Event("notificacionesActualizadas")
+    );
+
     return (
         <>
 

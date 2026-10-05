@@ -96,29 +96,23 @@ export default function LoginComponent() {
             router.push("/dashboard");
             return;
         }
-
-
         // SI NO COINCIDE NINGÚN USUARIO
         alert("Correo o contraseña incorrectos");
 
     };
 
-
     return (
-
         <section className="min-h-screen flex bg-black">
 
             {/* FORMULARIO */}
-            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center p-8">
-
+            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-12 py-8">
                 <form
                     onSubmit={iniciarSesion}
-                    className="w-full max-w-md"
+                    className="w-full max-w-lg"
                 >
 
                     {/* Logo */}
-                    <div className="mb-10">
-
+                    <div className="mb-5">
                         <h1 className="text-5xl font-bold text-gray-900 mb-3">
                             Fut<span className="text-green-500">Zone</span>
                         </h1>
@@ -126,12 +120,10 @@ export default function LoginComponent() {
                         <p className="text-black text-xl">
                             Inicia sesión para continuar
                         </p>
-
                     </div>
 
                     {/* Correo */}
-                    <div className="mb-1">
-
+                    <div className="mb-6">
                         <label className="text-black block mb-2">
                             Correo
                         </label>
@@ -143,13 +135,11 @@ export default function LoginComponent() {
                             onChange={(e) => setCorreo(e.target.value)}
                             className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
                         />
-
                     </div>
 
                     {/* Contraseña */}
                     <div className="mb-8">
-
-                        <label className="text-white block mb-2">
+                        <label className="text-black block mb-2">
                             Contraseña
                         </label>
 
@@ -160,7 +150,6 @@ export default function LoginComponent() {
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
                         />
-
                     </div>
 
                     {/* Botón */}
@@ -173,7 +162,6 @@ export default function LoginComponent() {
 
                     {/* Register */}
                     <p className="text-gray-400 mt-6 text-center">
-
                         ¿No tienes cuenta?{" "}
 
                         <span
@@ -182,11 +170,9 @@ export default function LoginComponent() {
                         >
                             Regístrate
                         </span>
-
                     </p>
 
                 </form>
-
             </div>
 
             {/* IMAGEN */}
@@ -196,30 +182,20 @@ export default function LoginComponent() {
                     backgroundImage: "url('/images/login3.avif')",
                 }}
             >
-
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-black/50"></div>
 
-                {/* Texto */}
                 <div className="relative z-10 flex flex-col justify-end p-16 text-white">
-
                     <h1 className="text-6xl font-bold mb-5 leading-tight">
-
                         Vive la pasión
                         del fútbol
-
                     </h1>
 
                     <p className="text-xl text-gray-300 max-w-xl">
-
                         Reserva canchas, organiza torneos
                         y disfruta la mejor experiencia
                         deportiva con FutZone.
-
                     </p>
-
                 </div>
-
             </div>
 
         </section>

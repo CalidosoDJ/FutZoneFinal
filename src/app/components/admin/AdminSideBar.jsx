@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 //icons
-import { LayoutDashboard, Users, CalendarDays, MapPinned, CreditCard, Trophy, Gift, BarChart3, Settings, LogOut} from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, MapPinned, CreditCard, Trophy, Gift, BarChart3, Settings, LogOut } from "lucide-react";
 
 export default function AdminSidebar() {
 
@@ -79,7 +79,7 @@ export default function AdminSidebar() {
 
     return (
 
-        <aside className="w-65 bg-gray-950 text-white flex flex-col">
+        <aside className="admin-sidebar-scroll w-65 bg-gray-950 text-white flex flex-col">
 
             <div className="p-8 border-b border-gray-800">
 
@@ -111,14 +111,13 @@ export default function AdminSidebar() {
                                 key={item.nombre}
                                 href={item.ruta}
                                 className={`flex items-center gap-4 px-8 py-4 transition
-                                ${
-                                    pathname === item.ruta
-                                    ? "bg-green-600"
-                                    : "hover:bg-gray-800"
-                                }`}
+                                ${pathname === item.ruta
+                                        ? "bg-green-600"
+                                        : "hover:bg-gray-800"
+                                    }`}
                             >
 
-                                <Icono size={22}/>
+                                <Icono size={22} />
 
                                 {item.nombre}
 

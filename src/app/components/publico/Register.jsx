@@ -71,37 +71,35 @@ export default function RegisterForm() {
     };
 
     return (
-
         <section className="min-h-screen flex bg-black">
 
             {/* FORMULARIO */}
-            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center p-3">
-
+            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-8 py-4">
                 <form
                     onSubmit={registrarUsuario}
                     className="w-full max-w-md"
                 >
 
-                    <div className="mb-2">
-
-                        <h1 className="text-5xl font-bold text-gray-900">
+                    {/* Logo */}
+                    <div className="mb-5">
+                        <h1 className="text-4xl font-bold text-gray-900">
                             Fut<span className="text-green-600">Zone</span>
                         </h1>
 
-                        <p className="text-black mt-3 text-xl">
+                        <p className="text-black mt-1 text-lg">
                             Únete a la comunidad futbolera
                         </p>
-
                     </div>
 
-                    <div className="space-y-4">
+                    {/* Campos */}
+                    <div className="space-y-3">
 
                         <input
                             type="text"
                             placeholder="Ingrese su Nombre Completo"
                             value={nombre}
                             onChange={(e) => setNombre(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-dark focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
@@ -110,7 +108,7 @@ export default function RegisterForm() {
                             placeholder="Ingrese su Nombre de Usuario"
                             value={usuario}
                             onChange={(e) => setUsuario(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
@@ -119,16 +117,16 @@ export default function RegisterForm() {
                             placeholder="Ingrese su Correo electrónico"
                             value={correo}
                             onChange={(e) => setCorreo(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
                         <input
                             type="tel"
-                            placeholder="Numero Celular"
+                            placeholder="Número Celular"
                             value={celular}
                             onChange={(e) => setCelular(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
@@ -137,7 +135,7 @@ export default function RegisterForm() {
                             placeholder="Contraseña"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
@@ -146,62 +144,59 @@ export default function RegisterForm() {
                             placeholder="Confirmar contraseña"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full p-2 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
+                            className="w-full p-3 rounded-xl border border-black focus:outline-none focus:border-gray-500 text-black bg-gray-200"
                             required
                         />
 
                     </div>
 
+                    {/* Botón */}
                     <button
                         type="submit"
-                        className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-semibold transition"
+                        className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-semibold transition"
                     >
                         Registrarse
                     </button>
 
                     {/* Separador */}
-
-                    <div className="flex items-center my-5">
-
+                    <div className="flex items-center my-4">
                         <div className="flex-1 border-t border-black"></div>
 
-                        <span className="px-4 text-black text-sm">
+                        <span className="px-3 text-black text-sm">
                             o continúa con
                         </span>
 
                         <div className="flex-1 border-t border-black"></div>
-
                     </div>
 
                     {/* Redes Sociales */}
-
                     <div className="grid grid-cols-3 gap-3">
 
                         <button
                             type="button"
-                            className="flex justify-center items-center p-4 border rounded-xl bg-blue-700 hover:bg-blue-600 transition"
+                            className="flex justify-center items-center p-3 border rounded-xl bg-blue-700 hover:bg-blue-600 transition"
                         >
-                            <FaFacebook size={22} />
+                            <FaFacebook size={20} />
                         </button>
 
                         <button
                             type="button"
-                            className="flex justify-center items-center p-4 border bg-gray-300 rounded-2xl hover:bg-gray-400 transition"
+                            className="flex justify-center items-center p-3 border bg-gray-300 rounded-xl hover:bg-gray-400 transition"
                         >
-                            <FcGoogle size={22} />
+                            <FcGoogle size={20} />
                         </button>
 
                         <button
                             type="button"
-                            className="flex justify-center items-center p-4 border bg-black rounded-xl hover:bg-gray-800 transition"
+                            className="flex justify-center items-center p-3 border bg-black rounded-xl hover:bg-gray-800 transition"
                         >
-                            <FaTwitter size={22} />
+                            <FaTwitter size={20} />
                         </button>
 
                     </div>
 
-                    <p className="text-center text-gray-500 mt-6">
-
+                    {/* Login */}
+                    <p className="text-center text-gray-500 mt-4 text-sm">
                         ¿Ya tienes cuenta?
 
                         <span
@@ -210,11 +205,9 @@ export default function RegisterForm() {
                         >
                             Inicia sesión
                         </span>
-
                     </p>
 
                 </form>
-
             </div>
 
             {/* IMAGEN */}
@@ -229,21 +222,17 @@ export default function RegisterForm() {
                 <div className="absolute inset-0 bg-black/50"></div>
 
                 {/* Texto */}
-                <div className="relative z-10 flex flex-col p-16 text-white">
+                <div className="relative z-10 flex flex-col p-14 text-white">
 
-                    <h1 className="text-6xl font-bold mb-5 leading-tight">
-
+                    <h1 className="text-5xl font-bold mb-4 leading-tight">
                         Únete a la comunidad
                         FutZone
-
                     </h1>
 
-                    <p className="text-xl text-gray-300 max-w-xl">
-
+                    <p className="text-lg text-gray-300 max-w-xl">
                         Crea tu cuenta y administra
                         reservas, partidos y torneos
                         desde una sola plataforma.
-
                     </p>
 
                 </div>
@@ -251,6 +240,5 @@ export default function RegisterForm() {
             </div>
 
         </section>
-
     );
 }
