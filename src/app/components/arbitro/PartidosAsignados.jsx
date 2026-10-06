@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaFutbol } from "react-icons/fa";
 import { useArbitro } from "@/app/context/ArbitroContext";
 
 import SidebarArbitro from "./SidebarArbitro";
@@ -13,9 +13,14 @@ export default function PartidosAsignados() {
   const [orden, setOrden] = useState("fecha");
   const { partidos } = useArbitro();
 
-  const convertirFecha = (fecha) => {
-    const [dia, mes, anio] = fecha.split("/");
-    return new Date(anio, mes - 1, dia);
+  // Helper seguro para ordenar por fecha
+  const convertirFecha = (fechaStr) => {
+    if (!fechaStr) return new Date();
+    if (fechaStr.includes("/")) {
+      const [dia, mes, anio] = fechaStr.split("/");
+      return new Date(anio, mes - 1, dia);
+    }
+    return new Date(fechaStr);
   };
 
   const partidosFiltrados = useMemo(() => {
@@ -26,7 +31,8 @@ export default function PartidosAsignados() {
 
       const coincideBusqueda =
         partido.local.toLowerCase().includes(texto) ||
-        partido.visitante.toLowerCase().includes(texto);
+        partido.visitante.toLowerCase().includes(texto) ||
+        partido.cancha?.toLowerCase().includes(texto);
 
       const coincideEstado =
         filtroEstado === "Todos" || partido.estado === filtroEstado;
@@ -44,67 +50,44 @@ export default function PartidosAsignados() {
         break;
 
       default:
-        lista.sort((a, b) => convertirFecha(a.fecha) - convertirFecha(b.fecha));
+        lista.sort(
+          (a, b) => convertirFecha(a.fecha) - convertirFecha(b.fecha)
+        );
     }
 
     return lista;
-  }, [buscar, filtroEstado, orden]);
+  }, [partidos, buscar, filtroEstado, orden]);
 
   return (
     <main className="flex min-h-screen bg-gray-100">
       <SidebarArbitro />
 
-      <section className="flex-1 ml-72 p-8">
-        <header className="mb-8">
+      <section className="flex-1 ml-72 p-8 space-y-6">
+        <header>
           <h1 className="text-4xl font-bold text-slate-800">Mis Partidos</h1>
-
           <p className="mt-2 text-slate-600">
-            Consulta todos los partidos asignados para esta jornada.
+            Consulta y gestiona todos los partidos asignados para la jornada.
           </p>
         </header>
 
-        <section className="bg-white rounded-2xl shadow-md p-6 mb-8">
+        {/* Barra de Filtros y Búsqueda */}
+        <section className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar equipo..."
+                placeholder="Buscar por equipo o cancha..."
                 value={buscar}
                 onChange={(e) => setBuscar(e.target.value)}
-                className="
-w-full
-border
-border-gray-300
-rounded-xl
-py-3
-pl-12
-pr-4
-text-gray-700
-placeholder:text-gray-400
-outline-none
-focus:ring-2
-focus:ring-green-500
-"
+                className="w-full border border-gray-300 rounded-xl py-3 pl-12 pr-4 text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-green-500 transition-all"
               />
             </div>
 
             <select
               value={orden}
               onChange={(e) => setOrden(e.target.value)}
-              className="
-border
-border-gray-300
-rounded-xl
-px-4
-py-3
-text-gray-700
-bg-white
-outline-none
-focus:ring-2
-focus:ring-green-500
-"
+              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-700 bg-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
             >
               <option value="fecha">Ordenar por fecha</option>
               <option value="equipo">Ordenar por equipo</option>
@@ -112,15 +95,16 @@ focus:ring-green-500
             </select>
           </div>
 
+          {/* Botones de Filtro por Estado */}
           <div className="flex flex-wrap gap-3 mt-6">
             {["Todos", "Pendiente", "En Curso", "Finalizado"].map((estado) => (
               <button
                 key={estado}
                 onClick={() => setFiltroEstado(estado)}
-                className={`px-5 py-2 rounded-full font-semibold transition ${
+                className={`px-5 py-2 rounded-full font-semibold transition-all cursor-pointer ${
                   filtroEstado === estado
-                    ? "bg-green-600 text-white"
-                    : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 {estado}
@@ -129,17 +113,31 @@ focus:ring-green-500
           </div>
         </section>
 
-        <section className="mb-6">
-          <h2 className="text-lg font-bold text-slate-800">
-            ⚽ {partidosFiltrados.length} partidos encontrados
+        {/* Encabezado de Resultados */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <FaFutbol className="text-green-600" />
+            <span>{partidosFiltrados.length} partidos encontrados</span>
           </h2>
-        </section>
+        </div>
 
-        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {partidosFiltrados.map((partido) => (
-            <TarjetaPartido key={partido.id} {...partido} />
-          ))}
-        </section>
+        {/* Listado o Mensaje de No Resultados */}
+        {partidosFiltrados.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center text-gray-500 shadow-sm border border-gray-100">
+            <p className="text-lg font-medium">
+              No se encontraron partidos que coincidan con la búsqueda.
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Prueba cambiando el filtro de estado o el texto ingresado.
+            </p>
+          </div>
+        ) : (
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {partidosFiltrados.map((partido) => (
+              <TarjetaPartido key={partido.id} {...partido} />
+            ))}
+          </section>
+        )}
       </section>
     </main>
   );
