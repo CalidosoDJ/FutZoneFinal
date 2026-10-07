@@ -45,18 +45,17 @@ export default function DashboardArbitro() {
       badgeInferior: "Ver calendario completo",
       icono: <FaCalendarAlt />,
       color: "bg-blue-500",
-    action: () => router.push("/arbitro/calendario"),
+      action: () => router.push("/arbitro/calendario"),
     },
     {
       titulo: "Calificación",
-      valor: arbitro?.calificacion || "4.9",
-      subtexto: "Excelente (Últimos 10 juegos)",
-      badgeSuperior: "Ver más",
-      badgeInferior: "Ver desglose de comentarios",
+      valor: arbitro?.calificacion || 4.9,
+      subtexto: "Excelente (Promedio general)",
+      badgeInferior: "Ver en mi perfil", // Texto claro y coherente con el destino
       icono: <FaStar />,
       color: "bg-yellow-500",
       esRating: true,
-      action: () => router.push("/arbitro/perfil"),
+      action: () => router.push("/arbitro/perfil"), // Redirige directamente al perfil
     },
     {
       titulo: "Partidos Dirigidos",
@@ -98,9 +97,7 @@ export default function DashboardArbitro() {
             <h2 className="text-xl font-semibold text-gray-800 mb-1">
               Estado del árbitro
             </h2>
-            <p className="text-sm text-gray-400">
-              Próximo compromiso en 3h
-            </p>
+            <p className="text-sm text-gray-400">Próximo compromiso en 3h</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -145,7 +142,7 @@ export default function DashboardArbitro() {
           {partidos
             .filter(
               (partido) =>
-                partido.estado === "Pendiente" || partido.estado === "En Curso"
+                partido.estado === "Pendiente" || partido.estado === "En Curso",
             )
             .map((partido) => (
               <TarjetaPartido key={partido.id} {...partido} />

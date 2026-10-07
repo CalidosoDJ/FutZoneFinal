@@ -18,9 +18,11 @@ export default function DashboardArbitroPage() {
 
   // Filtrar conteos rápidos
   const partidosHoy = partidos.filter(
-    (p) => p.estado === "Pendiente" || p.estado === "En Curso"
+    (p) => p.estado === "Pendiente" || p.estado === "En Curso",
   );
-  const pendientesCount = partidos.filter((p) => p.estado === "Pendiente").length;
+  const pendientesCount = partidos.filter(
+    (p) => p.estado === "Pendiente",
+  ).length;
   const enCursoCount = partidos.filter((p) => p.estado === "En Curso").length;
 
   // Configuración de las 4 tarjetas de métricas
@@ -46,12 +48,12 @@ export default function DashboardArbitroPage() {
     {
       titulo: "Calificación",
       valor: arbitro?.calificacion || 4.9,
-      subtexto: "Excelente (Últimos 10 juegos)",
-      badgeInferior: "Ver desglose de comentarios",
+      subtexto: "Excelente (Promedio general)",
+      badgeInferior: "Ver en mi perfil", // Texto claro y coherente con el destino
       icono: <FaStar />,
       color: "bg-yellow-500",
       esRating: true,
-      action: () => router.push("/arbitro/perfil"),
+      action: () => router.push("/arbitro/perfil"), // Redirige directamente al perfil
     },
     {
       titulo: "Partidos Dirigidos",
@@ -75,7 +77,9 @@ export default function DashboardArbitroPage() {
             Buenos días, {arbitro?.nombre?.split(" ")[0] || "Carlos"} 👋
           </h1>
           <p className="text-gray-500 mt-2">
-            Hoy tienes {partidosHoy.length} partido{partidosHoy.length !== 1 ? "s" : ""} asignado{partidosHoy.length !== 1 ? "s" : ""}.
+            Hoy tienes {partidosHoy.length} partido
+            {partidosHoy.length !== 1 ? "s" : ""} asignado
+            {partidosHoy.length !== 1 ? "s" : ""}.
           </p>
         </header>
 
@@ -106,7 +110,9 @@ export default function DashboardArbitroPage() {
             >
               <span
                 className={`w-3 h-3 rounded-full ${
-                  arbitro?.disponible ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  arbitro?.disponible
+                    ? "bg-green-500 animate-pulse"
+                    : "bg-gray-400"
                 }`}
               ></span>
               {arbitro?.disponible ? "Disponible" : "No disponible"}

@@ -57,7 +57,8 @@ export default function PerfilArbitro() {
             <div>
               <h1 className="text-4xl font-bold text-slate-800">Mi Perfil</h1>
               <p className="text-slate-600 mt-1">
-                Administra tu información personal y consulta tus estadísticas generales.
+                Administra tu información personal y consulta tus estadísticas
+                generales.
               </p>
             </div>
 
@@ -74,11 +75,13 @@ export default function PerfilArbitro() {
 
           <section className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
             {/* Encabezado Visual */}
-            <div className="h-40 bg-gradient-to-r from-green-600 to-emerald-500" />
+            <div className="h-40 bg-linear-to-r from-green-600 to-emerald-500" />
 
             <div className="px-8 pb-8">
               {/* Foto y Datos Principales */}
               <div className="-mt-16 flex flex-col items-center">
+              
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={arbitro?.foto || "https://i.pravatar.cc/300?img=15"}
                   alt={arbitro?.nombre || "Árbitro"}
@@ -89,7 +92,9 @@ export default function PerfilArbitro() {
                   {arbitro?.nombre}
                 </h2>
 
-                <p className="text-gray-500 font-medium">{arbitro?.categoria}</p>
+                <p className="text-gray-500 font-medium">
+                  {arbitro?.categoria}
+                </p>
 
                 {/* BOTÓN EDITAR PERFIL */}
                 <button
@@ -157,7 +162,7 @@ export default function PerfilArbitro() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
             {/* Encabezado del modal */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-8 py-6 flex justify-between items-center">
+            <div className="bg-linear-to-r from-green-600 to-emerald-500 px-8 py-6 flex justify-between items-center">
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white">
                   Editar perfil

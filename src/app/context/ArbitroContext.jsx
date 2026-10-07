@@ -5,18 +5,38 @@ import { createContext, useContext, useState } from "react";
 const ArbitroContext = createContext();
 
 export function ArbitroProvider({ children }) {
-  // 1. Estado del Árbitro (Incluye campo de disponibilidad)
-  const [arbitro, setArbitro] = useState({
-    nombre: "Carlos Pérez",
-    correo: "carlos.perez@futzone.com",
-    telefono: "320 456 7890",
-    ciudad: "Popayán",
-    categoria: "Árbitro Nacional",
-    partidosDirigidos: 125,
-    calificacion: 4.9,
-    ingreso: "15 Enero 2025",
-    foto: "https://i.pravatar.cc/300?img=15",
-    disponible: true, // Agregado para interacción del dashboard
+  // 1. Estado del Árbitro: Lee directamente la sesión limpia guardada por el Login
+  const [arbitro, setArbitro] = useState(() => {
+    const datosBase = {
+      nombre: "Árbitro FutZone",
+      correo: "arbitro@futzone.com",
+      telefono: "320 456 7890",
+      ciudad: "Popayán",
+      categoria: "Árbitro Nacional",
+      partidosDirigidos: 125,
+      calificacion: 4.9,
+      ingreso: "15 Enero 2025",
+      foto: "https://i.pravatar.cc/300?img=15",
+      disponible: true,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const sesion = localStorage.getItem("usuarioSesion");
+        if (sesion) {
+          const user = JSON.parse(sesion);
+          return {
+            ...datosBase,
+            nombre: user.nombre || datosBase.nombre,
+            correo: user.correo || user.email || datosBase.correo,
+          };
+        }
+      } catch (error) {
+        console.error("Error al leer usuarioSesion del localStorage:", error);
+      }
+    }
+
+    return datosBase;
   });
 
   // 2. Estado de Partidos
@@ -26,7 +46,7 @@ export function ArbitroProvider({ children }) {
       local: "Atlético FC",
       visitante: "Juventus",
       cancha: "FutZone Norte",
-      fecha: "15/07/2026",
+      fecha: "15/10/2026",
       hora: "6:00 PM",
       categoria: "Sub-20",
       estado: "Pendiente",
@@ -36,7 +56,7 @@ export function ArbitroProvider({ children }) {
       local: "Millonarios",
       visitante: "Nacional",
       cancha: "FutZone Centro",
-      fecha: "16/07/2026",
+      fecha: "16/10/2026",
       hora: "8:00 PM",
       categoria: "Libre",
       estado: "En Curso",
@@ -64,7 +84,7 @@ export function ArbitroProvider({ children }) {
     );
   };
 
-  // Finalizar Partido (Corregido para obtener el partido real por id)
+  // Finalizar Partido (Registra el acta y suma +1 a partidos dirigidos)
   function finalizarPartido(id, resumen) {
     const partidoTarget = partidos.find((p) => p.id === id);
 

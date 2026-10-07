@@ -206,7 +206,7 @@ export default function CalendarioArbitro() {
                   </span>
                 </div>
 
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 rounded-2xl text-center space-y-2 shadow-sm">
+                <div className="bg-linear-to-br from-slate-900 to-slate-800 text-white p-5 rounded-2xl text-center space-y-2 shadow-sm">
                   <h3 className="text-xl font-extrabold">{partidoDetalle.local}</h3>
                   <p className="text-xs font-bold text-green-400 uppercase tracking-widest">
                     VS
