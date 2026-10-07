@@ -45,7 +45,7 @@ export default function DashboardArbitro() {
       badgeInferior: "Ver calendario completo",
       icono: <FaCalendarAlt />,
       color: "bg-blue-500",
-      action: () => router.push("/arbitro/partidos-asignados"),
+    action: () => router.push("/arbitro/calendario"),
     },
     {
       titulo: "Calificación",
