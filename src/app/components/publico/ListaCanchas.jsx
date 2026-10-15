@@ -1,89 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import CardCancha from "./CardCancha";
 
 export default function ListaCanchas() {
-
     const [buscar, setBuscar] = useState("");
     const [zona, setZona] = useState("todas");
     const [precio, setPrecio] = useState("ninguno");
+    const [canchas, setCanchas] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState("");
 
-    const canchas = [
 
-        {
-            id: 1,
-            nombre: "Cancha Sintética #1",
-            zona: "Fútbol 5",
-            direccion: "Centro Deportivo El Cubo",
-            telefono: "3106021273",
-            precio: 90000,
-            imagen: "/images/cancha1.jpg",
-            calificacion: 4.9,
-        },
+    useEffect(() => {
+        Promise.all([
+            fetch("http://127.0.0.1:8000/api/canchas/"),
+            fetch("http://127.0.0.1:8000/api/sedes/")
+        ])
+            .then(async ([respuestaCanchas, respuestaSedes]) => {
+                if (!respuestaCanchas.ok || !respuestaSedes.ok) {
+                    throw new Error("No se pudieron cargar los datos.");
+                }
 
-        {
-            id: 2,
-            nombre: "Cancha Sintética #2",
-            zona: "Fútbol 5",
-            direccion: "Centro Deportivo El Cubo",
-            telefono: "3106021273",
-            precio: 90000,
-            imagen: "/images/cancha2.jpg",
-            calificacion: 4.8,
-        },
+                const canchas = await respuestaCanchas.json();
+                const sedes = await respuestaSedes.json();
 
-        {
-            id: 3,
-            nombre: "Cancha Sintética #3",
-            zona: "Fútbol 6",
-            direccion: "Centro Deportivo El Cubo",
-            telefono: "3106021273",
-            precio: 100000,
-            imagen: "/images/cancha3.webp",
-            calificacion: 4.9,
-        },
+                return { canchas, sedes };
+            })
+            .then(({ canchas, sedes }) => {
+                const listaCanchas = canchas.map((cancha) => {
+                    console.log("CANCHA RECIBIDA DE DJANGO:", cancha);
+                    console.log("PRECIO EN DJANGO:", cancha.precio_hora);
 
-        {
-            id: 4,
-            nombre: "Cancha Sintética #4",
-            zona: "Fútbol 7",
-            direccion: "Popayán",
-            telefono: "3015550328",
-            precio: 90000,
-            imagen: "/images/cancha4.webp",
-            calificacion: 4.7,
-        },
+                    const sede = sedes.find(
+                        (item) => item.id_sede === cancha.id_sede
+                    );
 
-        {
-            id: 5,
-            nombre: "Cancha Sintética #5",
-            zona: "Fútbol 6",
-            direccion: "Popayán",
-            telefono: "3127599503",
-            precio: 75000,
-            imagen: "/images/cancha5.jpg",
-            calificacion: 4.6,
-        },
+                    return {
+                        id: cancha.id_cancha,
+                        nombre: cancha.nombre,
+                        zona: "Cancha sintética",
+                        direccion: sede
+                            ? `${sede.direccion}, ${sede.ciudad}, ${sede.departamento}`
+                            : "Ubicación no disponible",
+                        telefono: sede?.telefono || "",
+                        precio: Number(cancha.precio_hora),
+                        imagen: "/images/cancha1.jpg",
+                        calificacion: null,
+                        estado: cancha.estado,
+                        id_sede: cancha.id_sede,
+                        id_tipo: cancha.id_tipo
+                    };
+                });
 
-        {
-            id: 6,
-            nombre: "Cancha Sintética #6",
-            zona: "Fútbol 5",
-            direccion: "Popayán",
-            telefono: "3122971247",
-            precio: 80000,
-            imagen: "/images/cancha6.jpg",
-            calificacion: 4.8,
-        },
+                setCanchas(listaCanchas);
+                setError("");
+            })
+            .catch((error) => {
+                console.error("Error cargando canchas y sedes:", error);
+                setError(
+                    "No fue posible cargar las canchas y sus sedes. Verifica que Django esté funcionando."
+                );
+            })
+            .finally(() => {
+                setCargando(false);
+            });
+    }, []);
 
-    ];
 
-    let lista = canchas.filter(
-        (c) =>
-            c.nombre.toLowerCase().includes(buscar.toLowerCase()) &&
-            (zona === "todas" || c.zona === zona)
+    let lista = canchas.filter((cancha) =>
+        cancha.nombre.toLowerCase().includes(buscar.toLowerCase()) &&
+        (zona === "todas" || cancha.zona === zona)
     );
 
     if (precio === "menor") {
@@ -95,42 +83,26 @@ export default function ListaCanchas() {
     }
 
     return (
-
         <div className="min-h-screen bg-slate-100">
-
-            {/* HERO */}
-
             <section className="bg-gradient-to-r from-green-700 to-green-600 py-20">
-
                 <div className="max-w-7xl mx-auto px-6">
-
                     <h1 className="text-5xl font-black text-white">
                         Encuentra tu cancha ideal
                     </h1>
-
                     <p className="text-green-100 mt-5 text-lg max-w-2xl">
                         Reserva la mejor cancha para tu próximo partido de forma rápida y segura.
                     </p>
-
                 </div>
-
             </section>
 
-            {/* FILTROS */}
-
             <section className="max-w-7xl mx-auto px-6 -mt-10">
-
                 <div className="bg-white rounded-3xl shadow-xl p-8">
-
                     <div className="grid md:grid-cols-3 gap-5">
-
                         <div className="relative">
-
                             <Search
                                 className="absolute left-4 top-4 text-green-600"
                                 size={20}
                             />
-
                             <input
                                 type="text"
                                 placeholder="Buscar cancha..."
@@ -138,7 +110,6 @@ export default function ListaCanchas() {
                                 onChange={(e) => setBuscar(e.target.value)}
                                 className="w-full border text-gray-700 rounded-xl py-3 pl-12"
                             />
-
                         </div>
 
                         <select
@@ -146,12 +117,7 @@ export default function ListaCanchas() {
                             onChange={(e) => setZona(e.target.value)}
                             className="border text-gray-700 rounded-xl px-4"
                         >
-
                             <option value="todas">Todas las canchas</option>
-                            <option value="Fútbol 5">Fútbol 5</option>
-                            <option value="Fútbol 6">Fútbol 6</option>
-                            <option value="Fútbol 7">Fútbol 7</option>
-
                         </select>
 
                         <select
@@ -159,80 +125,50 @@ export default function ListaCanchas() {
                             onChange={(e) => setPrecio(e.target.value)}
                             className="border text-gray-700 rounded-xl px-4"
                         >
-
                             <option value="ninguno">Ordenar por precio</option>
                             <option value="menor">Menor a mayor</option>
                             <option value="mayor">Mayor a menor</option>
-
                         </select>
-
                     </div>
-
                 </div>
-
             </section>
-
-            {/* CONTADOR */}
 
             <section className="max-w-7xl mx-auto px-6 py-12">
-
                 <div className="flex justify-between items-center mb-10">
-
                     <h2 className="text-2xl text-gray-700 font-black">
-
-                        {lista.length} Canchas disponibles
-
+                        {cargando ? "Cargando canchas..." : `${lista.length} Canchas registradas`}
                     </h2>
-
-                    <span className="text-green-600 font-semibold">
-
-                        FutZone
-
-                    </span>
-
+                    <span className="text-green-600 font-semibold">FutZone</span>
                 </div>
 
-                {/* TARJETAS */}
+                {error && (
+                    <div className="bg-red-100 text-red-700 rounded-xl p-5 mb-6">
+                        {error}
+                    </div>
+                )}
 
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-
-                    {lista.length > 0 ? (
-
-                        lista.map((cancha) => (
-
-                            <CardCancha
-                                key={cancha.id}
-                                cancha={cancha}
-                            />
-
-                        ))
-
-                    ) : (
-
-                        <div className="col-span-3 bg-white rounded-3xl p-12 shadow-lg text-center">
-
-                            <h2 className="text-3xl font-bold text-slate-700">
-
-                                No se encontraron canchas
-
-                            </h2>
-
-                            <p className="text-slate-500 mt-3">
-
-                                Cambia los filtros o busca otra cancha.
-
-                            </p>
-
-                        </div>
-
-                    )}
-
-                </div>
-
+                {!cargando && !error && (
+                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                        {lista.length > 0 ? (
+                            lista.map((cancha) => (
+                                <CardCancha
+                                    key={cancha.id}
+                                    cancha={cancha}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-3 bg-white rounded-3xl p-12 shadow-lg text-center">
+                                <h2 className="text-3xl font-bold text-slate-700">
+                                    No se encontraron canchas
+                                </h2>
+                                <p className="text-slate-500 mt-3">
+                                    Cambia los filtros o busca otra cancha.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </section>
-
         </div>
-
     );
-
 }

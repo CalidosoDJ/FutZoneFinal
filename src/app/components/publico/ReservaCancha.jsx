@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -13,12 +14,19 @@ import {
     Phone,
     ArrowLeft
 } from "lucide-react";
-import { useState, useEffect } from "react";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 export default function ReservaCancha({ cancha }) {
+
+
     const router = useRouter();
+
+
+    const [reservaCreada, setReservaCreada] = useState(null);
+    const [cargandoReserva, setCargandoReserva] = useState(false);
 
     const [requiereArbitro, setRequiereArbitro] = useState(false);
     const [tipoArbitro, setTipoArbitro] = useState("Profesional");
@@ -27,11 +35,8 @@ export default function ReservaCancha({ cancha }) {
     const [hora, setHora] = useState("");
     const [reservas, setReservas] = useState([]);
     const [mostrarModal, setMostrarModal] = useState(false);
-    const [reservaCreada, setReservaCreada] = useState(null);
-
 
     const horarios = [
-
         "01:00 PM",
         "02:00 PM",
         "03:00 PM",
@@ -42,136 +47,287 @@ export default function ReservaCancha({ cancha }) {
         "08:00 PM",
         "09:00 PM",
     ];
-    const horarioReservado = (horaActual) => {
 
-        return reservas.some(
-
-            (r) =>
-
-                r.canchaId === cancha.id &&
-                r.fecha === fecha &&
-                r.hora === horaActual
-
-        );
-
-    };
-    const reservarAhora = () => {
-
-        if (!fecha || !hora) {
-
-            alert("Selecciona una fecha y una hora.");
-
-            return;
-
-        }
-
-        const existeReserva = reservas.some(
-
-            (r) =>
-
-                r.canchaId === cancha.id &&
-                r.fecha === fecha &&
-                r.hora === hora
-
-        );
-
-        if (existeReserva) {
-
-            alert("❌ Ese horario ya está reservado.");
-
-            return;
-
-        }
-
-        const precioArbitro = requiereArbitro ? 50000 : 0;
-
-        const total = cancha.precio + precioArbitro;
-
-        const nuevaReserva = {
-
-            id: Date.now(),
-
-            canchaId: cancha.id,
-
-            cancha: cancha.nombre,
-
-            fecha,
-
-            hora,
-
-            precio: cancha.precio,
-
-            precioArbitro,
-
-            total,
-
-            requiereArbitro,
-
-            tipoArbitro: requiereArbitro ? tipoArbitro : null,
-
-            direccion: cancha.direccion,
-
-            imagen: cancha.imagen,
-
-            estado: "Confirmada",
-
-        };
-        const nuevasReservas = [...reservas, nuevaReserva];
-
-        localStorage.setItem(
-            "reservas",
-            JSON.stringify(nuevasReservas)
-        );
-
-        setReservas(nuevasReservas);
-
-        setReservaCreada(nuevaReserva);
-
-        setMostrarModal(true);
-
-    };
-
-
+    // Consultar las reservas registradas en Django
     useEffect(() => {
+        const cargarReservas = async () => {
+            try {
+                const respuesta = await fetch(
+                    "http://127.0.0.1:8000/api/reservas/"
+                );
 
-        const datos = JSON.parse(
-            localStorage.getItem("reservas")
-        ) || [];
+                if (!respuesta.ok) {
+                    throw new Error("No se pudieron consultar las reservas.");
+                }
 
-        setReservas(datos);
+                const datos = await respuesta.json();
 
+                if (!Array.isArray(datos)) {
+                    console.error(
+                        "La API no devolvió una lista de reservas:",
+                        datos
+                    );
+                    return;
+                }
+
+                const reservasFormateadas = datos.map((reserva) => {
+                    const [horas, minutos] = reserva.hora_inicio
+                        .split(":")
+                        .map(Number);
+
+                    const periodo = horas >= 12 ? "PM" : "AM";
+                    const hora12 = horas % 12 || 12;
+
+                    return {
+                        id: reserva.id_reserva,
+                        canchaId: Number(reserva.id_cancha),
+                        cancha: reserva.nombre_cancha || "",
+                        fecha: reserva.fecha_reserva,
+                        hora:
+                            `${String(hora12).padStart(2, "0")}:` +
+                            `${String(minutos).padStart(2, "0")} ${periodo}`,
+                        horaInicio: reserva.hora_inicio,
+                        horaFin: reserva.hora_fin,
+                        precio: Number(reserva.total),
+                        total: Number(reserva.total),
+                        requiereArbitro: false,
+                        tipoArbitro: null,
+                        estado: reserva.estado,
+                    };
+                });
+
+                setReservas(reservasFormateadas);
+            } catch (error) {
+                console.error(
+                    "Error al cargar las reservas:",
+                    error
+                );
+            }
+        };
+
+        cargarReservas();
     }, []);
 
-    // CREAR NOTIFICACIÓN PARA EL ADMIN
-    const notificaciones =
-        JSON.parse(
-            localStorage.getItem("notificaciones")
-        ) || [];
-
-    const nuevaNotificacion = {
-        id: Date.now(),
-        tipo: "reserva",
-        titulo: "Nueva reserva",
-        mensaje: `Se ha realizado una nueva reserva de cancha.`,
-        tiempo: "Hace unos segundos",
-        icono: "CalendarCheck",
-        leida: false
+    // Comprobar si el horario seleccionado está ocupado
+    const horarioReservado = (horaActual) => {
+        return reservas.some((reserva) => {
+            return (
+                Number(reserva.canchaId) === Number(cancha?.id) &&
+                reserva.fecha === fecha &&
+                reserva.hora === horaActual &&
+                !["cancelada", "cancelado"].includes(
+                    String(reserva.estado || "").toLowerCase()
+                )
+            );
+        });
     };
 
-    const nuevasNotificaciones = [
-        nuevaNotificacion,
-        ...notificaciones
-    ];
+    // Convertir una hora como 03:00 PM al formato 15:00:00
+    const convertirHora24 = (horaSeleccionada) => {
+        const [tiempo, periodo] = horaSeleccionada.split(" ");
+        let [horas, minutos] = tiempo.split(":").map(Number);
 
-    localStorage.setItem(
-        "notificaciones",
-        JSON.stringify(nuevasNotificaciones)
-    );
+        if (periodo === "PM" && horas !== 12) {
+            horas += 12;
+        }
 
-    // Avisar al Navbar que hay una nueva notificación
-    window.dispatchEvent(
-        new Event("notificacionesActualizadas")
-    );
+        if (periodo === "AM" && horas === 12) {
+            horas = 0;
+        }
+
+        return (
+            `${String(horas).padStart(2, "0")}:` +
+            `${String(minutos).padStart(2, "0")}:00`
+        );
+    };
+
+    // Registrar una reserva en Django
+    const reservarAhora = async () => {
+        if (!fecha || !hora) {
+            alert("Selecciona una fecha y una hora.");
+            return;
+        }
+
+        if (cargandoReserva) {
+            return;
+        }
+
+        // Obtener la sesión del usuario
+        let usuarioLogueado;
+
+        try {
+            usuarioLogueado = JSON.parse(
+                localStorage.getItem("usuarioLogueado")
+            );
+        } catch {
+            alert("No se pudo leer la sesión. Inicia sesión nuevamente.");
+            router.push("/login");
+            return;
+        }
+
+        if (!usuarioLogueado?.id_usuario) {
+            alert("Debes iniciar sesión para reservar.");
+            router.push("/login");
+            return;
+        }
+
+        // El rol 2 corresponde a los jugadores
+        if (Number(usuarioLogueado.id_rol) !== 2) {
+            alert("Debes ingresar con una cuenta de jugador.");
+            return;
+        }
+
+        if (!cancha?.id) {
+            alert("No se encontró el identificador de la cancha.");
+            return;
+        }
+
+        // El servicio de árbitro todavía no se guarda en Django
+        if (requiereArbitro) {
+            alert(
+                "El servicio de árbitro todavía no está integrado con la base de datos. Por ahora, reserva la cancha sin ese servicio."
+            );
+            return;
+        }
+
+        const horaInicio = convertirHora24(hora);
+
+        // Cada reserva ocupa una hora
+        const [horasInicio, minutosInicio] = horaInicio
+            .split(":")
+            .map(Number);
+
+        const minutosFin = horasInicio * 60 + minutosInicio + 60;
+        const horasFin = Math.floor(minutosFin / 60);
+        const minutosFinReloj = minutosFin % 60;
+
+        const horaFin =
+            `${String(horasFin).padStart(2, "0")}:` +
+            `${String(minutosFinReloj).padStart(2, "0")}:00`;
+
+        setCargandoReserva(true);
+
+        try {
+            const respuesta = await fetch(
+                "http://127.0.0.1:8000/api/reservas/",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        id_usuario: usuarioLogueado.id_usuario,
+                        id_cancha: cancha.id,
+                        fecha_reserva: fecha,
+                        hora_inicio: horaInicio,
+                        hora_fin: horaFin,
+                    }),
+                }
+            );
+
+            const datos = await respuesta.json().catch(() => ({}));
+
+            if (!respuesta.ok) {
+                const errores = Object.entries(datos)
+                    .map(([campo, mensajes]) => {
+                        const texto = Array.isArray(mensajes)
+                            ? mensajes.join(", ")
+                            : typeof mensajes === "string"
+                                ? mensajes
+                                : JSON.stringify(mensajes);
+
+                        return `${campo}: ${texto}`;
+                    })
+                    .join("\n");
+
+                alert(
+                    errores ||
+                    "No fue posible registrar la reserva. Verifica la fecha y el horario."
+                );
+
+                return;
+            }
+
+            // Tomar los datos confirmados por el backend
+            const totalServidor = Number(datos.total);
+
+            const nuevaReserva = {
+                id: datos.id_reserva,
+                canchaId: Number(datos.id_cancha),
+                cancha: datos.nombre_cancha || cancha.nombre,
+                fecha: datos.fecha_reserva,
+                hora,
+                horaInicio: datos.hora_inicio,
+                horaFin: datos.hora_fin,
+                precio: totalServidor,
+                precioArbitro: 0,
+                total: totalServidor,
+                requiereArbitro: false,
+                tipoArbitro: null,
+                direccion: cancha.direccion,
+                imagen: cancha.imagen,
+                estado: datos.estado,
+            };
+
+            setReservas((reservasActuales) => [
+                ...reservasActuales,
+                nuevaReserva,
+            ]);
+
+            setReservaCreada(nuevaReserva);
+            setMostrarModal(true);
+
+            // Crear la notificación solo cuando Django registre la reserva
+            try {
+                const notificacionesGuardadas = JSON.parse(
+                    localStorage.getItem("notificaciones") || "[]"
+                );
+
+                const notificaciones = Array.isArray(
+                    notificacionesGuardadas
+                )
+                    ? notificacionesGuardadas
+                    : [];
+
+                const nuevaNotificacion = {
+                    id: Date.now(),
+                    tipo: "reserva",
+                    titulo: "Nueva reserva",
+                    mensaje: `Se ha registrado una reserva de ${cancha.nombre}.`,
+                    tiempo: "Hace unos segundos",
+                    icono: "CalendarCheck",
+                    leida: false,
+                };
+
+                localStorage.setItem(
+                    "notificaciones",
+                    JSON.stringify([
+                        nuevaNotificacion,
+                        ...notificaciones,
+                    ])
+                );
+
+                window.dispatchEvent(
+                    new Event("notificacionesActualizadas")
+                );
+            } catch (error) {
+                console.error(
+                    "La reserva se registró, pero no se pudo guardar la notificación:",
+                    error
+                );
+            }
+        } catch (error) {
+            console.error("Error al crear la reserva:", error);
+
+            alert(
+                "No se pudo conectar con Django. Verifica que el servidor esté iniciado."
+            );
+        } finally {
+            setCargandoReserva(false);
+        }
+    };
+
+
 
     return (
         <>
