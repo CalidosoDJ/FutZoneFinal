@@ -16,32 +16,42 @@ export default function RegisterForm() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const registrarUsuario = (e) => {
+    
+const registrarUsuario = (e) => {
+    e.preventDefault();
 
-        e.preventDefault();
+    const correoNormalizado = correo.trim().toLowerCase();
+    const nombreNormalizado = nombre.trim();
+    const usuarioNormalizado = usuario.trim();
 
-        if (password !== confirmPassword) {
-            alert("Las contraseñas no coinciden");
-            return;
-        }
+    // 1. Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+        alert("Las contraseñas no coinciden");
+        return;
+    }
 
-        // Obtener usuarios existentes
-        const usuarios =
-            JSON.parse(localStorage.getItem("usuarios")) || [];
+    // 2. Identificar si es un árbitro
+    const esArbitro = correoNormalizado.endsWith("@futzone.com");
 
-        // Validar correo repetido
-        const existeCorreo = usuarios.find(
-            (u) => u.correo === correo
+    // 3. REGISTRO INDEPENDIENTE DEL ÁRBITRO
+    if (esArbitro) {
+        const usuariosArbitro =
+            JSON.parse(localStorage.getItem("usuariosArbitro")) || [];
+
+        const existeCorreo = usuariosArbitro.some(
+            (arbitro) =>
+                arbitro.correo?.trim().toLowerCase() === correoNormalizado
         );
 
         if (existeCorreo) {
-            alert("Este correo ya está registrado");
+            alert("Este correo ya está registrado como árbitro");
             return;
         }
 
-        // Validar usuario repetido
-        const existeUsuario = usuarios.find(
-            (u) => u.usuario === usuario
+        const existeUsuario = usuariosArbitro.some(
+            (arbitro) =>
+                arbitro.usuario?.trim().toLowerCase() ===
+                usuarioNormalizado.toLowerCase()
         );
 
         if (existeUsuario) {
@@ -49,26 +59,71 @@ export default function RegisterForm() {
             return;
         }
 
-        const nuevoUsuario = {
+        const nuevoArbitro = {
             id: Date.now(),
-            nombre,
-            usuario,
-            celular,
-            correo,
+            nombre: nombreNormalizado,
+            usuario: usuarioNormalizado,
+            celular: celular.trim(),
+            correo: correoNormalizado,
             password,
+            rol: "arbitro",
         };
 
-        usuarios.push(nuevoUsuario);
+        usuariosArbitro.push(nuevoArbitro);
 
         localStorage.setItem(
-            "usuarios",
-            JSON.stringify(usuarios)
+            "usuariosArbitro",
+            JSON.stringify(usuariosArbitro)
         );
 
-        alert("Usuario registrado correctamente");
+        alert("Árbitro registrado correctamente. Inicia sesión.");
 
-        router.push("/login");
+    router.push("/login");
+return;
+} 
+
+    // 4. REGISTRO INDEPENDIENTE DEL USUARIO NORMAL
+    const usuarios =
+        JSON.parse(localStorage.getItem("usuarios")) || [];
+
+    const existeCorreo = usuarios.some(
+        (u) => u.correo?.trim().toLowerCase() === correoNormalizado
+    );
+
+    if (existeCorreo) {
+        alert("Este correo ya está registrado");
+        return;
+    }
+
+    const existeUsuario = usuarios.some(
+        (u) =>
+            u.usuario?.trim().toLowerCase() ===
+            usuarioNormalizado.toLowerCase()
+    );
+
+    if (existeUsuario) {
+        alert("Este nombre de usuario ya existe");
+        return;
+    }
+
+    const nuevoUsuario = {
+        id: Date.now(),
+        nombre: nombreNormalizado,
+        usuario: usuarioNormalizado,
+        celular: celular.trim(),
+        correo: correoNormalizado,
+        password,
     };
+
+    usuarios.push(nuevoUsuario);
+
+    localStorage.setItem("usuarios", JSON.stringify(usuarios));
+
+    alert("Usuario registrado correctamente. Inicia sesión.");
+
+    router.push("/login");
+}
+
 
     return (
 

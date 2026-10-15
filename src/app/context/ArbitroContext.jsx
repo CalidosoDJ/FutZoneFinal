@@ -1,45 +1,52 @@
+
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+} from "react";
 
 const ArbitroContext = createContext();
 
 export function ArbitroProvider({ children }) {
-  // 1. Estado del Árbitro: Lee directamente la sesión limpia guardada por el Login
-  const [arbitro, setArbitro] = useState(() => {
-    const datosBase = {
-      nombre: "Árbitro FutZone",
-      correo: "arbitro@futzone.com",
-      telefono: "320 456 7890",
-      ciudad: "Popayán",
-      categoria: "Árbitro Nacional",
-      partidosDirigidos: 125,
-      calificacion: 4.9,
-      ingreso: "15 Enero 2025",
-      foto: "https://i.pravatar.cc/300?img=15",
-      disponible: true,
-    };
+  // Datos reales del árbitro autenticado
+  const [arbitro, setArbitro] = useState(null);
+  const [cargandoArbitro, setCargandoArbitro] = useState(true);
 
-    if (typeof window !== "undefined") {
-      try {
-        const sesion = localStorage.getItem("usuarioSesion");
-        if (sesion) {
-          const user = JSON.parse(sesion);
-          return {
-            ...datosBase,
-            nombre: user.nombre || datosBase.nombre,
-            correo: user.correo || user.email || datosBase.correo,
-          };
-        }
-      } catch (error) {
-        console.error("Error al leer usuarioSesion del localStorage:", error);
+  // Cargar los datos de la sesión
+  useEffect(() => {
+    try {
+      const sesion = localStorage.getItem("arbitroSesion");
+
+      if (sesion) {
+        const usuario = JSON.parse(sesion);
+
+        setArbitro({
+          ...usuario,
+          nombre: usuario.nombre || "",
+          correo: usuario.correo || usuario.email || "",
+          telefono: usuario.celular || usuario.telefono || "",
+          ciudad: usuario.ciudad || "",
+          categoria: usuario.categoria || "",
+          partidosDirigidos: usuario.partidosDirigidos ?? 0,
+          calificacion: usuario.calificacion ?? 0,
+          foto: usuario.foto || "",
+          disponible: usuario.disponible ?? true,
+        });
+      } else {
+        setArbitro(null);
       }
+    } catch (error) {
+      console.error("Error al cargar la sesión del árbitro:", error);
+      setArbitro(null);
+    } finally {
+      setCargandoArbitro(false);
     }
+  }, []);
 
-    return datosBase;
-  });
-
-  // 2. Estado de Partidos
+  // Partidos
   const [partidos, setPartidos] = useState([
     {
       id: 25,
@@ -63,50 +70,48 @@ export function ArbitroProvider({ children }) {
     },
   ]);
 
-  // 3. Notificaciones y Partido Seleccionado
+  // Notificaciones y partido seleccionado
   const [notificaciones, setNotificaciones] = useState([]);
   const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
 
-  // --- FUNCIONES DE NEGOCIO (ACCIONES) ---
-
-  // Alternar disponibilidad del árbitro
   const toggleDisponibilidad = () => {
-    setArbitro((prev) => ({
-      ...prev,
-      disponible: !prev.disponible,
-    }));
-  };
-
-  // Cambiar estado del partido (ej: Pendiente -> En Curso)
-  const cambiarEstadoPartido = (id, nuevoEstado) => {
-    setPartidos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado } : p))
+    setArbitro((prev) =>
+      prev ? { ...prev, disponible: !prev.disponible } : prev
     );
   };
 
-  // Finalizar Partido (Registra el acta y suma +1 a partidos dirigidos)
+  const cambiarEstadoPartido = (id, nuevoEstado) => {
+    setPartidos((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, estado: nuevoEstado } : p
+      )
+    );
+  };
+
   function finalizarPartido(id, resumen) {
     const partidoTarget = partidos.find((p) => p.id === id);
 
-    setPartidos((partidosAnteriores) =>
-      partidosAnteriores.map((partido) =>
+    setPartidos((prev) =>
+      prev.map((partido) =>
         partido.id === id
           ? { ...partido, estado: "Finalizado", resumen }
           : partido
       )
     );
 
-    // Incrementar automáticamente partidos dirigidos del árbitro
-    setArbitro((prev) => ({
-      ...prev,
-      partidosDirigidos: prev.partidosDirigidos + 1,
-    }));
+    setArbitro((prev) =>
+      prev
+        ? {
+            ...prev,
+            partidosDirigidos: (prev.partidosDirigidos ?? 0) + 1,
+          }
+        : prev
+    );
 
-    // Agregar Notificación con datos seguros
     const nombreLocal = partidoTarget?.local || "Equipo A";
     const nombreVisitante = partidoTarget?.visitante || "Equipo B";
 
-    setNotificaciones((anteriores) => [
+    setNotificaciones((prev) => [
       {
         id: Date.now(),
         icono: "📋",
@@ -115,7 +120,7 @@ export function ArbitroProvider({ children }) {
         fecha: new Date().toLocaleString(),
         leida: false,
       },
-      ...anteriores,
+      ...prev,
     ]);
 
     if (partidoSeleccionado?.id === id) {
@@ -123,12 +128,26 @@ export function ArbitroProvider({ children }) {
     }
   }
 
-  // Actualizar perfil
+  // Actualizar perfil y mantener los datos sincronizados
   const actualizarArbitro = (nuevosDatos) => {
-    setArbitro((prev) => ({ ...prev, ...nuevosDatos }));
+    setArbitro((prev) => {
+      if (!prev) return prev;
+
+      const actualizado = { ...prev, ...nuevosDatos };
+
+      const sesion = localStorage.getItem("arbitroSesion");
+
+      if (sesion) {
+        localStorage.setItem(
+          "arbitroSesion",
+          JSON.stringify({ ...JSON.parse(sesion), ...actualizado })
+        );
+      }
+
+      return actualizado;
+    });
   };
 
-  // Marcar notificaciones como leídas
   const marcarNotificacionLeida = (id) => {
     setNotificaciones((prev) =>
       prev.map((n) => (n.id === id ? { ...n, leida: true } : n))
@@ -141,6 +160,7 @@ export function ArbitroProvider({ children }) {
         arbitro,
         setArbitro,
         actualizarArbitro,
+        cargandoArbitro,
         toggleDisponibilidad,
         partidos,
         setPartidos,
@@ -160,8 +180,12 @@ export function ArbitroProvider({ children }) {
 
 export function useArbitro() {
   const context = useContext(ArbitroContext);
+
   if (!context) {
-    throw new Error("useArbitro debe usarse dentro de un ArbitroProvider");
+    throw new Error(
+      "useArbitro debe usarse dentro de un ArbitroProvider"
+    );
   }
+
   return context;
 }
