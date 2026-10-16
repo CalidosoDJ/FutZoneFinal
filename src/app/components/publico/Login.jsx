@@ -2,104 +2,90 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginComponent() {
-
     const router = useRouter();
 
     const [correo, setCorreo] = useState("");
     const [password, setPassword] = useState("");
+    const [mostrarPassword, setMostrarPassword] = useState(false);
 
-    //rol admin
     useEffect(() => {
+        // 1. SI YA TIENE SESIÓN ACTIVA, REDIRIGIR AUTOMÁTICAMENTE
+        const usuarioLogueado = localStorage.getItem("usuarioLogueado");
+        if (usuarioLogueado) {
+            const user = JSON.parse(usuarioLogueado);
+            if (user.rol === "admin") {
+                router.replace("/admin");
+            } else if (user.rol === "arbitro") {
+                router.replace("/arbitro/dashboard");
+            } else {
+                router.replace("/dashboard");
+            }
+            return;
+        }
 
+        // 2. CREAR ADMIN POR DEFECTO SI NO EXISTE
         const adminExiste = localStorage.getItem("admin");
-
         if (!adminExiste) {
-
             const admin = {
                 nombre: "Administrador",
                 usuario: "admin",
                 celular: "3106021273",
                 correo: "admin@futzone.com",
                 password: "admin123",
-                rol: "admin"
+                rol: "admin",
             };
-
             localStorage.setItem("admin", JSON.stringify(admin));
         }
-
-    }, []);
+    }, [router]);
 
     const iniciarSesion = (e) => {
-
-
         e.preventDefault();
 
         // LOGIN DEL ADMINISTRADOR
-        const admin = JSON.parse(localStorage.getItem("admin"));
+        const admin = JSON.parse(localStorage.getItem("admin") || "null");
 
         if (
             admin &&
             admin.correo === correo &&
             admin.password === password
         ) {
-            localStorage.setItem(
-                "usuarioLogueado",
-                JSON.stringify(admin)
-            );
-
-            router.push("/admin");
+            localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
+            router.replace("/admin"); // router.replace evita guardar /login en el historial
             return;
         }
 
-
         // LOGIN DEL ÁRBITRO
-        if (
-            correo === "arbitro@futzone.com" &&
-            password === "123"
-        ) {
-
+        if (correo === "arbitro@futzone.com" && password === "123") {
             const arbitro = {
                 nombre: "Árbitro FutZone",
                 correo: "arbitro@futzone.com",
                 rol: "arbitro",
             };
 
-            localStorage.setItem(
-                "usuarioLogueado",
-                JSON.stringify(arbitro)
-            );
-
-            router.push("/arbitro/dashboard");
+            localStorage.setItem("usuarioLogueado", JSON.stringify(arbitro));
+            router.replace("/arbitro/dashboard");
             return;
         }
 
-
         // LOGIN DE USUARIOS REGISTRADOS
-        const usuarios =
-            JSON.parse(localStorage.getItem("usuarios")) || [];
+        const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
 
         const usuarioEncontrado = usuarios.find(
-            (u) =>
-                u.correo === correo &&
-                u.password === password
+            (u) => u.correo === correo && u.password === password
         );
 
         if (usuarioEncontrado) {
-
-            localStorage.setItem(
-                "usuarioLogueado",
-                JSON.stringify(usuarioEncontrado)
-            );
-
-            router.push("/dashboard");
+            localStorage.setItem("usuarioLogueado", JSON.stringify(usuarioEncontrado));
+            router.replace("/dashboard");
             return;
         }
-        // SI NO COINCIDE NINGÚN USUARIO
-        alert("Correo o contraseña incorrectos");
 
+        alert("Correo o contraseña incorrectos");
     };
+
 
     return (
         <section className="min-h-screen flex bg-black">
@@ -139,17 +125,31 @@ export default function LoginComponent() {
 
                     {/* Contraseña */}
                     <div className="mb-8">
-                        <label className="text-black block mb-2">
+                        <label className="text-black block mb-2 font-medium">
                             Contraseña
                         </label>
 
-                        <input
-                            type="password"
-                            placeholder="Ingrese su Contraseña"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
-                        />
+                        <div className="relative flex items-center">
+                            <input
+                                type={mostrarPassword ? "text" : "password"}
+                                placeholder="Ingrese su Contraseña"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-gray-300 border border-black text-black p-4 pr-12 rounded-2xl outline-none focus:border-gray-950 transition"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setMostrarPassword(!mostrarPassword)}
+                                className="absolute right-4 text-gray-700 hover:text-black transition cursor-pointer p-1"
+                            >
+                                {mostrarPassword ? (
+                                    <EyeOff size={22} />
+                                ) : (
+                                    <Eye size={22} />
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Botón */}

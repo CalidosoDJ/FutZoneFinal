@@ -548,26 +548,6 @@ export default function AdminNavBar() {
                                 </button>
 
 
-                                {/* CONFIGURACIÓN */}
-
-                                <button
-                                    className="w-full flex items-center
-                                    gap-3 px-3 py-3 rounded-xl
-                                    hover:bg-gray-100
-                                    transition text-gray-700"
-                                >
-
-                                    <Settings
-                                        size={19}
-                                        className="text-gray-500"
-                                    />
-
-                                    <span>
-                                        Configuración
-                                    </span>
-
-                                </button>
-
                             </div>
 
 
