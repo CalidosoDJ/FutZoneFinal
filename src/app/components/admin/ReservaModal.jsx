@@ -220,27 +220,30 @@ export default function ReservaModal({
                     {/* Hora */}
 
                     <div>
-
-                        <label>Hora</label>
-
-                        <input
-
-                            type="time"
-
+                        <label className="block text-gray-700 font-semibold mb-2">Hora de Reserva</label>
+                        <select
                             value={formulario.hora}
-
                             onChange={(e) =>
                                 setFormulario({
                                     ...formulario,
-                                    hora:
-                                        e.target.value,
+                                    hora: e.target.value,
                                 })
                             }
-
-                            className="w-full border rounded-xl p-3 mt-2"
-
-                        />
-
+                            className="w-full border rounded-xl p-3 bg-white text-gray-800 outline-none focus:border-green-500 transition"
+                            required
+                        >
+                            <option value="">Seleccione una hora</option>
+                            <option value="13:00">01:00 PM</option>
+                            <option value="14:00">02:00 PM</option>
+                            <option value="15:00">03:00 PM</option>
+                            <option value="16:00">04:00 PM</option>
+                            <option value="17:00">05:00 PM</option>
+                            <option value="18:00">06:00 PM</option>
+                            <option value="19:00">07:00 PM</option>
+                            <option value="20:00">08:00 PM</option>
+                            <option value="21:00">09:00 PM</option>
+                            <option value="22:00">10:00 PM</option>
+                        </select>
                     </div>
 
                 </div>

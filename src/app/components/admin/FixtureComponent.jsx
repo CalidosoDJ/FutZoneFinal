@@ -10,21 +10,22 @@ export default function FixtureComponent({
     torneos,
     setTorneos,
 }) {
-    if (!mostrarFixture || !torneo) return null;
-
-    const equipos = torneo.equipos || [];
-
     const [resultados, setResultados] = useState({});
 
+    // 1. Los Hooks DEBEN ejecutarse antes de cualquier return condicional
     useEffect(() => {
         if (torneo) {
             setResultados(torneo.resultados || {});
         }
     }, [torneo]);
 
+    // 2. Early return seguro después de declarar hooks
+    if (!mostrarFixture || !torneo) return null;
+
+    const equipos = torneo.equipos || [];
+
     // Generar partidos automáticamente
     const partidos = [];
-
     for (let i = 0; i < equipos.length; i += 2) {
         if (equipos[i + 1]) {
             partidos.push({
@@ -36,22 +37,19 @@ export default function FixtureComponent({
     }
 
     const guardarResultado = (index) => {
-
         const partido = partidos[index];
-
         const golesLocal = Number(resultados[index]?.localMarcador || 0);
         const golesVisitante = Number(resultados[index]?.visitanteMarcador || 0);
 
         let ganador = "Empate";
-
         if (golesLocal > golesVisitante) {
             ganador = partido.local;
         } else if (golesVisitante > golesLocal) {
             ganador = partido.visitante;
         }
 
-        setResultados({
-            ...resultados,
+        setResultados((prev) => ({
+            ...prev,
             [index]: {
                 local: partido.local,
                 visitante: partido.visitante,
@@ -59,7 +57,7 @@ export default function FixtureComponent({
                 visitanteMarcador: golesVisitante,
                 ganador,
             },
-        });
+        }));
     };
 
     const guardarFixture = () => {
@@ -73,180 +71,128 @@ export default function FixtureComponent({
         );
 
         setTorneos(nuevosTorneos);
-
-        localStorage.setItem(
-            "torneos",
-            JSON.stringify(nuevosTorneos)
-        );
+        localStorage.setItem("torneos", JSON.stringify(nuevosTorneos));
 
         alert("Fixture guardado correctamente.");
     };
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-6 text-gray-700">
-
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-
                 {/* Header */}
-
                 <div className="flex justify-between items-center p-6 border-b">
-
                     <div>
-
-                        <h2 className="text-3xl font-bold">
-                            Fixture
-                        </h2>
-
-                        <p className="text-gray-500">
-                            {torneo.nombre}
-                        </p>
-
+                        <h2 className="text-3xl font-bold">Fixture</h2>
+                        <p className="text-gray-500">{torneo.nombre}</p>
                     </div>
 
                     <button onClick={() => setMostrarFixture(false)}>
-                        <FaTimes className="text-red-600 text-2xl" />
+                        <FaTimes className="text-red-600 text-2xl cursor-pointer" />
                     </button>
-
                 </div>
 
                 {/* Partidos */}
-
                 <div className="p-8 grid md:grid-cols-2 gap-6">
-
-                    {partidos.map((partido, index) => (
-
-                        <div
-                            key={index}
-                            className="border rounded-2xl p-6 shadow hover:shadow-lg"
-                        >
-
-                            <div className="flex justify-center mb-4">
-
-                                <FaTrophy
-                                    className="text-yellow-500"
-                                    size={30}
-                                />
-
-                            </div>
-
-                            <h2 className="text-center text-xl font-bold">
-                                {partido.local}
-                            </h2>
-
-                            <div className="flex justify-center items-center gap-3 my-4">
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={resultados[index]?.localMarcador ?? ""}
-                                    onChange={(e) =>
-                                        setResultados({
-                                            ...resultados,
-                                            [index]: {
-                                                ...resultados[index],
-                                                localMarcador: e.target.value,
-                                            },
-                                        })
-                                    }
-                                    className="w-16 border rounded-lg p-2 text-center"
-                                />
-
-                                <span className="font-bold text-xl">
-                                    VS
-                                </span>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={resultados[index]?.visitanteMarcador ?? ""}
-                                    onChange={(e) =>
-                                        setResultados({
-                                            ...resultados,
-                                            [index]: {
-                                                ...resultados[index],
-                                                visitanteMarcador: e.target.value,
-                                            },
-                                        })
-                                    }
-                                    className="w-16 border rounded-lg p-2 text-center"
-                                />
-
-                            </div>
-
-                            <h2 className="text-center text-xl font-bold">
-                                {partido.visitante}
-                            </h2>
-
-                            <div className="flex justify-center mt-5">
-
-                                <button
-                                    onClick={() => {
-                                        const copia = {
-                                            ...resultados,
-                                            [index]: {
-                                                ...resultados[index],
-                                                local: resultados[index]?.localMarcador || 0,
-                                                visitante: resultados[index]?.visitanteMarcador || 0,
-                                            },
-                                        };
-
-                                        setResultados(copia);
-
-                                        setTimeout(() => guardarResultado(index), 0);
-                                    }}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl"
-                                >
-                                    Guardar Resultado
-                                </button>
-
-                            </div>
-
-                            {resultados[index]?.ganador && (
-
-                                <div className="mt-4 text-center">
-
-                                    <p className="text-gray-500">
-                                        Ganador
-                                    </p>
-
-                                    <h2 className="text-xl font-bold text-green-600">
-
-                                        🏆 {resultados[index].ganador}
-
-                                    </h2>
-
+                    {partidos.length > 0 ? (
+                        partidos.map((partido, index) => (
+                            <div
+                                key={index}
+                                className="border rounded-2xl p-6 shadow hover:shadow-lg"
+                            >
+                                <div className="flex justify-center mb-4">
+                                    <FaTrophy
+                                        className="text-yellow-500"
+                                        size={30}
+                                    />
                                 </div>
 
-                            )}
+                                <h2 className="text-center text-xl font-bold">
+                                    {partido.local}
+                                </h2>
 
-                        </div>
+                                <div className="flex justify-center items-center gap-3 my-4">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={resultados[index]?.localMarcador ?? ""}
+                                        onChange={(e) =>
+                                            setResultados((prev) => ({
+                                                ...prev,
+                                                [index]: {
+                                                    ...prev[index],
+                                                    localMarcador: e.target.value,
+                                                },
+                                            }))
+                                        }
+                                        className="w-16 border rounded-lg p-2 text-center outline-none focus:ring-2 focus:ring-green-500"
+                                    />
 
-                    ))}
+                                    <span className="font-bold text-xl">VS</span>
 
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={resultados[index]?.visitanteMarcador ?? ""}
+                                        onChange={(e) =>
+                                            setResultados((prev) => ({
+                                                ...prev,
+                                                [index]: {
+                                                    ...prev[index],
+                                                    visitanteMarcador: e.target.value,
+                                                },
+                                            }))
+                                        }
+                                        className="w-16 border rounded-lg p-2 text-center outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                </div>
+
+                                <h2 className="text-center text-xl font-bold">
+                                    {partido.visitante}
+                                </h2>
+
+                                <div className="flex justify-center mt-5">
+                                    <button
+                                        onClick={() => guardarResultado(index)}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl transition cursor-pointer"
+                                    >
+                                        Guardar Resultado
+                                    </button>
+                                </div>
+
+                                {resultados[index]?.ganador && (
+                                    <div className="mt-4 text-center">
+                                        <p className="text-gray-500">Ganador</p>
+                                        <h2 className="text-xl font-bold text-green-600">
+                                            🏆 {resultados[index].ganador}
+                                        </h2>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center col-span-2 text-gray-400 py-8">
+                            No hay partidos registrados aún. Agrega más equipos en el modal de equipos para generar los enfrentamientos.
+                        </p>
+                    )}
                 </div>
 
                 {/* Footer */}
-
                 <div className="border-t p-6 flex justify-end gap-4">
-
                     <button
                         onClick={guardarFixture}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl"
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition cursor-pointer"
                     >
                         Guardar Fixture
                     </button>
 
                     <button
                         onClick={() => setMostrarFixture(false)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl"
+                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold transition cursor-pointer"
                     >
                         Cerrar
                     </button>
-
                 </div>
-
             </div>
-
         </div>
     );
 }
