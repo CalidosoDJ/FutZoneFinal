@@ -6,7 +6,7 @@ export default function DashboardLayout({ children }) {
 
             <DashboardNavbar />
 
-            <main className="max-w-7xl mx-auto px-6 py-8">
+            <main className="max-w-7xl mx-auto px-6 py-5">
                 {children}
             </main>
 
