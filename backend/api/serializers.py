@@ -2,9 +2,11 @@
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from decimal import Decimal
-
 from rest_framework import serializers
-
+from .models import Usuarios
+from rest_framework import serializers
+from rest_framework import serializers
+from .models import Pagos
 from .models import Canchas, Sede, Usuarios, Reservas
 
 
@@ -20,10 +22,31 @@ class SedeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
+
+
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuarios
-        fields = '__all__'
+        fields = [
+            "id_usuario",
+            "nombre_completo",
+            "username",
+            "email",
+            "telefono",
+            "foto_url",
+            "estado",
+            "fecha_registro",
+            "id_rol",
+        ]
+
+        read_only_fields = [
+            "id_usuario",
+            "username",
+            "estado",
+            "fecha_registro",
+            "id_rol",
+        ]
 
 
 class RegistroUsuarioSerializer(serializers.ModelSerializer):
@@ -184,3 +207,74 @@ class ReservaSerializer(serializers.ModelSerializer):
             estado='pendiente',
             fecha_creacion=timezone.now()
         )
+
+
+
+
+
+class PagoSerializer(serializers.ModelSerializer):
+    nombre_usuario = serializers.CharField(
+        source="id_reserva.id_usuario.nombre_completo",
+        read_only=True
+    )
+
+    nombre_cancha = serializers.CharField(
+        source="id_reserva.id_cancha.nombre",
+        read_only=True
+    )
+
+    fecha_reserva = serializers.DateField(
+        source="id_reserva.fecha_reserva",
+        read_only=True
+    )
+
+    class Meta:
+        model = Pagos
+        fields = [
+            "id_pago",
+            "id_reserva",
+            "nombre_usuario",
+            "nombre_cancha",
+            "fecha_reserva",
+            "monto",
+            "metodo_pago",
+            "comprobante_url",
+            "estado",
+            "fecha_pago",
+        ]
+
+        read_only_fields = [
+            "id_pago",
+            "nombre_usuario",
+            "nombre_cancha",
+            "fecha_reserva",
+            "fecha_pago",
+        ]
+
+    def validate(self, data):
+        reserva = data.get(
+            "id_reserva",
+            getattr(self.instance, "id_reserva", None)
+        )
+
+        metodo = data.get(
+            "metodo_pago",
+            getattr(self.instance, "metodo_pago", None)
+        )
+
+        if reserva is None:
+            raise serializers.ValidationError(
+                {"id_reserva": "Debes seleccionar una reserva."}
+            )
+
+        if metodo not in ["Efectivo", "Nequi"]:
+            raise serializers.ValidationError(
+                {"metodo_pago": "El método debe ser Efectivo o Nequi."}
+            )
+
+        # El monto se obtiene de la reserva para evitar
+        # que el frontend envíe un valor arbitrario.
+        if self.instance is None:
+            data["monto"] = reserva.total
+
+        return data

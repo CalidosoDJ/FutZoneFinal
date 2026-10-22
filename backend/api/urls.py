@@ -1,25 +1,28 @@
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-
 from .views import (
+    PagoViewSet,
+    ReservaViewSet,
     CanchaViewSet,
     SedeViewSet,
     UsuarioViewSet,
     LoginViewSet,
-    ReservaViewSet
 )
 
-
-
+# Primero creamos el router
 router = DefaultRouter()
-router.register('reservas', ReservaViewSet)
-router.register('canchas', CanchaViewSet)
-router.register('sedes', SedeViewSet)
-router.register('usuarios', UsuarioViewSet)
-router.register('login', LoginViewSet, basename='login')
 
+# Después registramos las rutas
+router.register("pagos", PagoViewSet, basename="pagos")
+router.register("reservas", ReservaViewSet, basename="reservas")
+router.register("canchas", CanchaViewSet, basename="canchas")
+router.register("sedes", SedeViewSet, basename="sedes")
+router.register("usuarios", UsuarioViewSet, basename="usuarios")
+router.register("login", LoginViewSet, basename="login")
 
+# Finalmente, declaramos las URL
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

@@ -19,24 +19,27 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+function convertirHora24(hora12) {
+    const [horaTexto, periodo] = hora12.split(" ");
+    let [horas, minutos] = horaTexto.split(":").map(Number);
+
+    if (periodo === "PM" && horas !== 12) horas += 12;
+    if (periodo === "AM" && horas === 12) horas = 0;
+
+    return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00`;
+}
+
 export default function ReservaCancha({ cancha }) {
-
-
     const router = useRouter();
-
 
     const [reservaCreada, setReservaCreada] = useState(null);
     const [cargandoReserva, setCargandoReserva] = useState(false);
-
     const [requiereArbitro, setRequiereArbitro] = useState(false);
     const [tipoArbitro, setTipoArbitro] = useState("Profesional");
-
     const [fecha, setFecha] = useState("");
     const [hora, setHora] = useState("");
     const [reservas, setReservas] = useState([]);
     const [mostrarModal, setMostrarModal] = useState(false);
-    const [reservaCreada, setReservaCreada] = useState(null);
-
 
     const horarios = [
         "01:00 PM",
@@ -50,61 +53,35 @@ export default function ReservaCancha({ cancha }) {
         "09:00 PM",
     ];
 
-    useEffect(() => {
-        // Cargar reservas globales
-        const datos = JSON.parse(localStorage.getItem("reservas")) || [];
-        setReservas(datos);
-
-        // Cargar usuario en sesión
-        const sesion = localStorage.getItem("usuarioLogueado");
-        if (sesion) {
-            setUsuarioLogueado(JSON.parse(sesion));
-        }
-    }, []);
-
-
-    // Consultar las reservas registradas en Django
+    // Consultar las reservas guardadas en Django.
     useEffect(() => {
         const cargarReservas = async () => {
             try {
-                const respuesta = await fetch(
-                    "http://127.0.0.1:8000/api/reservas/"
-                );
+                const respuesta = await fetch("http://127.0.0.1:8000/api/reservas/");
 
                 if (!respuesta.ok) {
                     throw new Error("No se pudieron consultar las reservas.");
                 }
 
                 const datos = await respuesta.json();
+                const lista = Array.isArray(datos) ? datos : (datos.results || []);
 
-                if (!Array.isArray(datos)) {
-                    console.error(
-                        "La API no devolvió una lista de reservas:",
-                        datos
-                    );
-                    return;
-                }
-
-                const reservasFormateadas = datos.map((reserva) => {
-                    const [horas, minutos] = reserva.hora_inicio
-                        .split(":")
-                        .map(Number);
-
+                const reservasFormateadas = lista.map((reserva) => {
+                    const horaInicio = String(reserva.hora_inicio || "00:00:00");
+                    const [horas, minutos] = horaInicio.split(":").map(Number);
                     const periodo = horas >= 12 ? "PM" : "AM";
                     const hora12 = horas % 12 || 12;
 
                     return {
                         id: reserva.id_reserva,
-                        canchaId: Number(reserva.id_cancha),
-                        cancha: reserva.nombre_cancha || "",
-                        fecha: reserva.fecha_reserva,
-                        hora:
-                            `${String(hora12).padStart(2, "0")}:` +
-                            `${String(minutos).padStart(2, "0")} ${periodo}`,
-                        horaInicio: reserva.hora_inicio,
+                        canchaId: Number(reserva.id_cancha?.id_cancha ?? reserva.id_cancha?.id ?? reserva.id_cancha),
+                        cancha: reserva.nombre_cancha || reserva.cancha?.nombre || "",
+                        fecha: String(reserva.fecha_reserva || "").slice(0, 10),
+                        hora: `${String(hora12).padStart(2, "0")}:${String(minutos).padStart(2, "0")} ${periodo}`,
+                        horaInicio,
                         horaFin: reserva.hora_fin,
-                        precio: Number(reserva.total),
-                        total: Number(reserva.total),
+                        precio: Number(reserva.total ?? reserva.precio ?? cancha?.precio ?? 0),
+                        total: Number(reserva.total ?? reserva.precio ?? cancha?.precio ?? 0),
                         requiereArbitro: false,
                         tipoArbitro: null,
                         estado: reserva.estado,
@@ -113,48 +90,46 @@ export default function ReservaCancha({ cancha }) {
 
                 setReservas(reservasFormateadas);
             } catch (error) {
-                console.error(
-                    "Error al cargar las reservas:",
-                    error
-                );
+                console.error("Error al cargar las reservas:", error);
             }
         };
 
         cargarReservas();
-    }, []);
+    }, [cancha?.id, cancha?.precio]);
 
-    // Comprobar si el horario seleccionado está ocupado
     const horarioReservado = (horaActual) => {
+        const fechaSeleccionada = fecha;
+        const horaSeleccionada = convertirHora24(horaActual).slice(0, 5);
 
-        return reservas.some(
-
-            (r) =>
-
-                r.canchaId === cancha.id &&
-                r.fecha === fecha &&
-                r.hora === horaActual
-
-        );
-
+        return reservas.some((reserva) => {
+            const horaReserva = String(reserva.horaInicio || convertirHora24(reserva.hora || "12:00 AM")).slice(0, 5);
+            return Number(reserva.canchaId) === Number(cancha?.id)
+                && String(reserva.fecha).slice(0, 10) === fechaSeleccionada
+                && horaReserva === horaSeleccionada
+                && String(reserva.estado || "").toLowerCase() !== "cancelada";
+        });
     };
-    const reservarAhora = () => {
 
+    const reservarAhora = async () => {
         if (!fecha || !hora) {
             alert("Selecciona una fecha y una hora.");
             return;
         }
 
-        if (cargandoReserva) {
+        if (cargandoReserva) return;
+
+        // Evitar reservas en fechas pasadas.
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const fechaElegida = new Date(`${fecha}T00:00:00`);
+        if (fechaElegida < hoy) {
+            alert("No puedes reservar una fecha que ya pasó.");
             return;
         }
 
-        // Obtener la sesión del usuario
         let usuarioLogueado;
-
         try {
-            usuarioLogueado = JSON.parse(
-                localStorage.getItem("usuarioLogueado")
-            );
+            usuarioLogueado = JSON.parse(localStorage.getItem("usuarioLogueado") || "null");
         } catch {
             alert("No se pudo leer la sesión. Inicia sesión nuevamente.");
             router.push("/login");
@@ -167,7 +142,6 @@ export default function ReservaCancha({ cancha }) {
             return;
         }
 
-        // El rol 2 corresponde a los jugadores
         if (Number(usuarioLogueado.id_rol) !== 2) {
             alert("Debes ingresar con una cuenta de jugador.");
             return;
@@ -178,48 +152,37 @@ export default function ReservaCancha({ cancha }) {
             return;
         }
 
-        // El servicio de árbitro todavía no se guarda en Django
         if (requiereArbitro) {
-            alert(
-                "El servicio de árbitro todavía no está integrado con la base de datos. Por ahora, reserva la cancha sin ese servicio."
-            );
+            alert("El servicio de árbitro todavía no está integrado con la base de datos. Por ahora, reserva la cancha sin ese servicio.");
+            return;
+        }
+
+        if (horarioReservado(hora)) {
+            alert("Ese horario ya está reservado. Selecciona otro.");
             return;
         }
 
         const horaInicio = convertirHora24(hora);
-
-        // Cada reserva ocupa una hora
-        const [horasInicio, minutosInicio] = horaInicio
-            .split(":")
-            .map(Number);
-
+        const [horasInicio, minutosInicio] = horaInicio.split(":").map(Number);
         const minutosFin = horasInicio * 60 + minutosInicio + 60;
         const horasFin = Math.floor(minutosFin / 60);
         const minutosFinReloj = minutosFin % 60;
-
-        const horaFin =
-            `${String(horasFin).padStart(2, "0")}:` +
-            `${String(minutosFinReloj).padStart(2, "0")}:00`;
+        const horaFin = `${String(horasFin).padStart(2, "0")}:${String(minutosFinReloj).padStart(2, "0")}:00`;
 
         setCargandoReserva(true);
 
         try {
-            const respuesta = await fetch(
-                "http://127.0.0.1:8000/api/reservas/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        id_usuario: usuarioLogueado.id_usuario,
-                        id_cancha: cancha.id,
-                        fecha_reserva: fecha,
-                        hora_inicio: horaInicio,
-                        hora_fin: horaFin,
-                    }),
-                }
-            );
+            const respuesta = await fetch("http://127.0.0.1:8000/api/reservas/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id_usuario: usuarioLogueado.id_usuario,
+                    id_cancha: cancha.id,
+                    fecha_reserva: fecha,
+                    hora_inicio: horaInicio,
+                    hora_fin: horaFin,
+                }),
+            });
 
             const datos = await respuesta.json().catch(() => ({}));
 
@@ -231,168 +194,59 @@ export default function ReservaCancha({ cancha }) {
                             : typeof mensajes === "string"
                                 ? mensajes
                                 : JSON.stringify(mensajes);
-
                         return `${campo}: ${texto}`;
                     })
-                    .join("\n");
+                    .join("\\n");
 
-                alert(
-                    errores ||
-                    "No fue posible registrar la reserva. Verifica la fecha y el horario."
-                );
-
+                alert(errores || "No fue posible registrar la reserva. Verifica la fecha y el horario.");
                 return;
             }
 
-            // Tomar los datos confirmados por el backend
-            const totalServidor = Number(datos.total);
-
+            const totalServidor = Number(datos.total ?? cancha.precio);
             const nuevaReserva = {
-                id: datos.id_reserva,
-                canchaId: Number(datos.id_cancha),
+                id: datos.id_reserva ?? datos.id ?? Date.now(),
+                canchaId: Number(datos.id_cancha?.id_cancha ?? datos.id_cancha?.id ?? datos.id_cancha ?? cancha.id),
                 cancha: datos.nombre_cancha || cancha.nombre,
-                fecha: datos.fecha_reserva,
+                fecha: String(datos.fecha_reserva || fecha).slice(0, 10),
                 hora,
-                horaInicio: datos.hora_inicio,
-                horaFin: datos.hora_fin,
-                precio: totalServidor,
-                precioArbitro: 0,
-                total: totalServidor,
+                horaInicio: datos.hora_inicio || horaInicio,
+                horaFin: datos.hora_fin || horaFin,
+                precio: Number(cancha.precio || totalServidor),
+                total: Number.isFinite(totalServidor) ? totalServidor : Number(cancha.precio || 0),
                 requiereArbitro: false,
                 tipoArbitro: null,
                 direccion: cancha.direccion,
                 imagen: cancha.imagen,
-                estado: datos.estado,
+                estado: datos.estado || "Confirmada",
             };
 
-            setReservas((reservasActuales) => [
-                ...reservasActuales,
-                nuevaReserva,
-            ]);
-
+            setReservas((reservasActuales) => [...reservasActuales, nuevaReserva]);
             setReservaCreada(nuevaReserva);
             setMostrarModal(true);
 
-            // Crear la notificación solo cuando Django registre la reserva
+            // Guardar notificación solo cuando Django confirme la reserva.
             try {
-                const notificacionesGuardadas = JSON.parse(
-                    localStorage.getItem("notificaciones") || "[]"
-                );
-
-                const notificaciones = Array.isArray(
-                    notificacionesGuardadas
-                )
-                    ? notificacionesGuardadas
-                    : [];
-
+                const notificaciones = JSON.parse(localStorage.getItem("notificaciones") || "[]");
                 const nuevaNotificacion = {
                     id: Date.now(),
                     tipo: "reserva",
                     titulo: "Nueva reserva",
-                    mensaje: `Se ha registrado una reserva de ${cancha.nombre}.`,
+                    mensaje: `Se ha realizado una nueva reserva de cancha: ${cancha.nombre}.`,
                     tiempo: "Hace unos segundos",
                     icono: "CalendarCheck",
                     leida: false,
                 };
-
-                localStorage.setItem(
-                    "notificaciones",
-                    JSON.stringify([
-                        nuevaNotificacion,
-                        ...notificaciones,
-                    ])
-                );
-
-                window.dispatchEvent(
-                    new Event("notificacionesActualizadas")
-                );
+                localStorage.setItem("notificaciones", JSON.stringify([nuevaNotificacion, ...notificaciones]));
+                window.dispatchEvent(new Event("notificacionesActualizadas"));
             } catch (error) {
-                console.error(
-                    "La reserva se registró, pero no se pudo guardar la notificación:",
-                    error
-                );
+                console.error("No se pudo guardar la notificación:", error);
             }
         } catch (error) {
             console.error("Error al crear la reserva:", error);
-
-            alert(
-                "No se pudo conectar con Django. Verifica que el servidor esté iniciado."
-            );
+            alert("No fue posible conectar con el servidor. Verifica que el backend de Django esté funcionando.");
         } finally {
             setCargandoReserva(false);
         }
-    };
-
-
-        // 1. CREAR OBJETO RESERVA VINCULADO AL USUARIO
-        const nuevaReserva = {
-            id: Date.now(),
-            usuarioId: usuarioLogueado?.id || null,
-            correo: usuarioLogueado?.correo || "",
-            canchaId: cancha.id,
-            canchaNombre: cancha.nombre,
-            cancha: cancha.nombre,
-            fecha,
-            hora,
-            precio: cancha.precio,
-            precioArbitro,
-            total,
-            requiereArbitro,
-            tipoArbitro: requiereArbitro ? tipoArbitro : null,
-            direccion: cancha.direccion,
-            imagen: cancha.imagen,
-            estado: "Confirmada",
-        };
-
-        const nuevasReservas = [...reservas, nuevaReserva];
-        localStorage.setItem("reservas", JSON.stringify(nuevasReservas));
-        setReservas(nuevasReservas);
-        setReservaCreada(nuevaReserva);
-
-        // 2. CREAR NOTIFICACIÓN ESPECÍFICA PARA EL JUGADOR EN SESIÓN
-        if (usuarioLogueado) {
-            const claveNotif = `notificacionesJugador_${usuarioLogueado.id}`;
-            const notificacionesPrevias = JSON.parse(localStorage.getItem(claveNotif)) || [];
-
-            const nuevaNotificacionJugador = {
-                id: Date.now(),
-                titulo: "⚽ ¡Reserva Confirmada!",
-                mensaje: `Reservaste ${cancha.nombre} para el ${fecha} a las ${hora}.`,
-                fecha: new Date().toLocaleDateString("es-CO"),
-                hora: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
-                leida: false,
-                detalle: {
-                    cancha: cancha.nombre,
-                    fecha,
-                    hora,
-                    total: `$${total.toLocaleString("es-CO")}`,
-                    estado: "Confirmada"
-                }
-            };
-
-            localStorage.setItem(
-                claveNotif,
-                JSON.stringify([nuevaNotificacionJugador, ...notificacionesPrevias])
-            );
-        }
-
-        // 3. NOTIFICACIÓN PARA EL ADMIN (OPCIONAL/GENERAL)
-        const notificacionesAdmin = JSON.parse(localStorage.getItem("notificaciones")) || [];
-        const nuevaNotifAdmin = {
-            id: Date.now(),
-            tipo: "reserva",
-            titulo: "Nueva reserva realizada",
-            mensaje: `${usuarioLogueado?.nombre || "Un usuario"} reservó ${cancha.nombre} para el ${fecha} a las ${hora}.`,
-            tiempo: "Hace unos segundos",
-            icono: "CalendarCheck",
-            leida: false
-        };
-        localStorage.setItem("notificaciones", JSON.stringify([nuevaNotifAdmin, ...notificacionesAdmin]));
-
-        // Disparar evento para actualizar el contador en el Navbar en tiempo real
-        window.dispatchEvent(new Event("notificacionesActualizadas"));
-
-        setMostrarModal(true);
     };
 
     return (
@@ -466,6 +320,7 @@ export default function ReservaCancha({ cancha }) {
                                 </h2>
                                 <input
                                     type="date"
+                                    min={new Date().toISOString().split("T")[0]}
                                     value={fecha}
                                     onChange={(e) => setFecha(e.target.value)}
                                     className="w-full text-gray-800 border border-gray-300 rounded-xl p-4 text-gray-800 outline-none focus:ring-2 focus:ring-green-600"
@@ -506,7 +361,7 @@ export default function ReservaCancha({ cancha }) {
                             <div className="bg-white rounded-3xl shadow-xl p-8">
                                 <h2 className="text-2xl text-gray-800 font-bold mb-8">Servicios incluidos</h2>
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {cancha.servicios.map((servicio, index) => {
+                                    {(cancha.servicios || []).map((servicio, index) => {
                                         let icono = "⚽";
                                         if (servicio === "Iluminación LED") icono = <Lightbulb className="text-yellow-500" size={22} />;
                                         else if (servicio === "Parqueadero") icono = <Car className="text-blue-500" size={22} />;
@@ -623,9 +478,10 @@ export default function ReservaCancha({ cancha }) {
 
                                 <button
                                     onClick={reservarAhora}
-                                    className="w-full mt-8 bg-green-600 hover:bg-green-700 transition text-white py-4 rounded-xl text-lg font-bold cursor-pointer shadow-md hover:shadow-lg"
+                                    disabled={cargandoReserva}
+                                    className="w-full mt-8 bg-green-600 hover:bg-green-700 disabled:opacity-60 transition text-white py-4 rounded-xl text-lg font-bold cursor-pointer shadow-md hover:shadow-lg"
                                 >
-                                    Reservar ahora
+                                    {cargandoReserva ? "Procesando reserva..." : "Reservar ahora"}
                                 </button>
                             </div>
                         </div>

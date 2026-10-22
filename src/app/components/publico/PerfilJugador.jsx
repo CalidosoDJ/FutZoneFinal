@@ -15,6 +15,8 @@ import {
     CalendarDays
 } from "lucide-react";
 import { useState, useEffect } from "react";
+const API_BASE =
+    process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
 export default function PerfilJugador() {
     const [usuarioLogueado, setUsuarioLogueado] = useState(null);
@@ -50,62 +52,265 @@ export default function PerfilJugador() {
     const [proximaReserva, setProximaReserva] = useState(null);
     const [totalReservas, setTotalReservas] = useState(0);
     const [canchasVisitadas, setCanchasVisitadas] = useState(0);
+    const [promedioCalificacion, setPromedioCalificacion] = useState(null);
+    const [anioRegistro, setAnioRegistro] = useState("—");
+    const [cargandoEstadisticas, setCargandoEstadisticas] = useState(true);
 
-    // 1. CARGA DE USUARIO Y SUS DATOS ESPECÍFICOS
+    // CARGAR DATOS DE LA SESIÓN (respuesta del login de Django)
     useEffect(() => {
-        const sesion = localStorage.getItem("usuarioLogueado");
-        if (!sesion) return;
+        try {
+            const sesion = localStorage.getItem("usuarioLogueado");
+            if (!sesion) return;
 
-        const user = JSON.parse(sesion);
-        setUsuarioLogueado(user);
+            const user = JSON.parse(sesion);
+            if (!user || typeof user !== "object") return;
 
-        // Cargar Perfil Personal individual del usuario
-        const perfilGuardado = localStorage.getItem(`perfilUsuario_${user.id}`);
-        if (perfilGuardado) {
-            setPerfil(JSON.parse(perfilGuardado));
-        } else {
+            // Django puede entregar id_usuario; algunas versiones del frontend usan id.
+            const userId = user.id_usuario ?? user.id ?? user.pk ?? user.usuario_id ?? user.username ?? user.email;
+            const usuario = { ...user, id: userId };
+            setUsuarioLogueado(usuario);
+            // Consultar los datos actuales del usuario en Django.
+            if (user.id_usuario) {
+                fetch(`${API_BASE}/usuarios/${user.id_usuario}/`)
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            throw new Error("No se pudo consultar el perfil en Django.");
+                        }
+
+                        return response.json();
+                    })
+                    .then((datos) => {
+                        setUsuarioLogueado((actual) => ({
+                            ...actual,
+                            ...datos,
+                        }));
+
+                        setPerfil((actual) => ({
+                            ...actual,
+                            nombre: datos.nombre_completo || "",
+                            correo: datos.email || "",
+                            telefono: datos.telefono || "",
+                        }));
+
+                        setFotoPerfil(
+                            datos.foto_url || "/images/login.jpg"
+                        );
+                    })
+                    .catch((error) => {
+                        console.error("Error consultando el perfil:", error);
+                    });
+            }
+
+            const perfilGuardadoRaw = localStorage.getItem(`perfilUsuario_${userId}`);
+            const perfilGuardado = perfilGuardadoRaw ? JSON.parse(perfilGuardadoRaw) : {};
+
+            // Los campos del backend tienen prioridad para que aparezcan los datos del login.
             setPerfil({
-                nombre: user.nombre || user.usuario || "",
-                correo: user.correo || "",
-                telefono: user.celular || "",
-                ciudad: "Popayán",
+                ...perfilGuardado,
+                nombre: user.nombre_completo || user.nombre || user.full_name || user.username || perfilGuardado.nombre || "",
+                correo: user.email || user.correo || perfilGuardado.correo || "",
+                telefono: user.telefono || user.celular || user.phone || perfilGuardado.telefono || "",
+                ciudad: user.ciudad || perfilGuardado.ciudad || "Popayán",
             });
-        }
 
-        // Cargar Perfil Deportivo individual
-        const deportivoGuardado = localStorage.getItem(`perfilDeportivo_${user.id}`);
-        if (deportivoGuardado) {
-            setPerfilDeportivo(JSON.parse(deportivoGuardado));
-        }
+            const deportivoGuardado = localStorage.getItem(`perfilDeportivo_${userId}`);
+            if (deportivoGuardado) setPerfilDeportivo((actual) => ({ ...actual, ...JSON.parse(deportivoGuardado) }));
 
-        // Cargar Foto individual
-        const fotoGuardada = localStorage.getItem(`fotoPerfil_${user.id}`);
-        if (fotoGuardada) {
-            setFotoPerfil(fotoGuardada);
-        }
+            const fotoGuardada = localStorage.getItem(`fotoPerfil_${userId}`);
+            setFotoPerfil(fotoGuardada || user.foto_url || user.foto || "/images/login.jpg");
 
-        // Cargar Reservas exclusivas del usuario
-        const reservasGuardadas = JSON.parse(localStorage.getItem("reservas")) || [];
-        const misReservas = reservasGuardadas.filter((r) => r.usuarioId === user.id || r.correo === user.correo);
+            // Las reservas siguen leyendo el almacenamiento local que usa actualmente la página.
+            const reservasGuardadas = JSON.parse(localStorage.getItem("reservas") || "[]");
+            const emailUsuario = user.email || user.correo || "";
+            // Consultar estadísticas y próxima reserva desde Django.
+            const cargarEstadisticas = async () => {
+                setCargandoEstadisticas(true);
 
-        setTotalReservas(misReservas.length);
+                try {
+                    const response = await fetch(`${API_BASE}/reservas/`);
 
-        // Contar canchas únicas visitadas
-        const canchasUnicas = new Set(misReservas.map((r) => r.canchaNombre || r.cancha));
-        setCanchasVisitadas(canchasUnicas.size);
+                    if (!response.ok) {
+                        throw new Error("No se pudieron consultar las reservas.");
+                    }
 
-        // Obtener la próxima reserva
-        if (misReservas.length > 0) {
-            setProximaReserva(misReservas[misReservas.length - 1]);
+                    const respuesta = await response.json();
+
+                    // Funciona tanto con listas normales como con respuestas paginadas.
+                    const reservas = Array.isArray(respuesta)
+                        ? respuesta
+                        : respuesta.results || [];
+
+                    const idUsuario = user.id_usuario ?? user.id;
+                    const emailUsuario = user.email || user.correo || "";
+
+                    // Cada jugador consulta únicamente sus propias reservas.
+                    const misReservas = reservas.filter((reserva) =>
+                        String(reserva.id_usuario) === String(idUsuario) ||
+                        (
+                            emailUsuario &&
+                            String(reserva.email || reserva.correo || "").toLowerCase() ===
+                            emailUsuario.toLowerCase()
+                        )
+                    );
+
+                    const estadoReserva = (reserva) =>
+                        String(reserva.estado || "").trim().toLowerCase();
+
+                    // No contar reservas canceladas como reservas realizadas.
+                    const reservasValidas = misReservas.filter(
+                        (reserva) => estadoReserva(reserva) !== "cancelada"
+                    );
+
+                    setTotalReservas(reservasValidas.length);
+
+                    // Las canchas visitadas se calculan con reservas finalizadas.
+                    const reservasFinalizadas = misReservas.filter((reserva) =>
+                        ["finalizada", "finalizado", "completada", "completado"]
+                            .includes(estadoReserva(reserva))
+                    );
+
+                    const canchasUnicas = new Set(
+                        reservasFinalizadas
+                            .map((reserva) => reserva.id_cancha)
+                            .filter((id) => id !== null && id !== undefined)
+                            .map(String)
+                    );
+
+                    setCanchasVisitadas(canchasUnicas.size);
+
+                    // Encontrar la reserva futura más cercana que siga activa.
+                    const ahora = new Date();
+
+                    const siguientesReservas = misReservas
+                        .filter((reserva) =>
+                            ["pendiente", "confirmada", "confirmado", "activa", "activo"]
+                                .includes(estadoReserva(reserva))
+                        )
+                        .map((reserva) => {
+                            const fecha = reserva.fecha_reserva || reserva.fecha;
+                            const hora = reserva.hora_inicio || "00:00:00";
+
+                            return {
+                                ...reserva,
+                                fecha,
+                                hora,
+                                fechaHora: fecha ? new Date(`${fecha}T${hora}`) : null,
+                                canchaNombre:
+                                    reserva.nombre_cancha ||
+                                    reserva.cancha_nombre ||
+                                    reserva.cancha?.nombre ||
+                                    "Cancha deportiva",
+                            };
+                        })
+                        .filter((reserva) =>
+                            reserva.fechaHora &&
+                            !Number.isNaN(reserva.fechaHora.getTime()) &&
+                            reserva.fechaHora >= ahora
+                        )
+                        .sort((a, b) => a.fechaHora - b.fechaHora);
+
+                    setProximaReserva(siguientesReservas[0] || null);
+
+                    // Consultar la fecha real de registro del usuario.
+                    if (user.id_usuario) {
+                        const usuarioResponse = await fetch(
+                            `${API_BASE}/usuarios/${user.id_usuario}/`
+                        );
+
+                        if (usuarioResponse.ok) {
+                            const datosUsuario = await usuarioResponse.json();
+
+                            if (datosUsuario.fecha_registro) {
+                                setAnioRegistro(
+                                    String(datosUsuario.fecha_registro).slice(0, 4)
+                                );
+                            }
+                        }
+                    }
+
+                    // El promedio se mantiene vacío hasta conectarlo con las
+                    // calificaciones reales de Django.
+                    setPromedioCalificacion(null);
+                } catch (error) {
+                    console.error("Error cargando estadísticas:", error);
+                } finally {
+                    setCargandoEstadisticas(false);
+                }
+            };
+
+            cargarEstadisticas();
+        } catch (error) {
+            console.error("No se pudieron cargar los datos del perfil:", error);
         }
     }, []);
 
-    // GUARDAR PERFIL PERSONAL
-    const guardarPerfil = () => {
-        if (!usuarioLogueado) return;
-        localStorage.setItem(`perfilUsuario_${usuarioLogueado.id}`, JSON.stringify(perfil));
-        setMostrarModalPerfil(false);
-        alert("Perfil actualizado correctamente.");
+    // GUARDAR PERFIL PERSONAL EN ESTE NAVEGADOR.
+    // Para persistir los cambios en MySQL se necesita un endpoint de actualización en Django.
+    const guardarPerfil = async () => {
+        if (!usuarioLogueado?.id_usuario) {
+            alert("No se encontró el ID del usuario. Inicia sesión nuevamente.");
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${API_BASE}/usuarios/${usuarioLogueado.id_usuario}/`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        nombre_completo: perfil.nombre.trim(),
+                        email: perfil.correo.trim(),
+                        telefono: perfil.telefono.trim(),
+                    }),
+                }
+            );
+
+            const datos = await response.json();
+
+            if (!response.ok) {
+                const mensaje = Object.entries(datos)
+                    .map(([campo, errores]) =>
+                        `${campo}: ${Array.isArray(errores)
+                            ? errores.join(", ")
+                            : errores
+                        }`
+                    )
+                    .join("\n");
+
+                throw new Error(
+                    mensaje || "Django no pudo actualizar el perfil."
+                );
+            }
+
+            setUsuarioLogueado((actual) => ({
+                ...actual,
+                ...datos,
+            }));
+
+            setPerfil((actual) => ({
+                ...actual,
+                nombre: datos.nombre_completo || "",
+                correo: datos.email || "",
+                telefono: datos.telefono || "",
+            }));
+
+            localStorage.setItem(
+                "usuarioLogueado",
+                JSON.stringify({
+                    ...usuarioLogueado,
+                    ...datos,
+                })
+            );
+
+            setMostrarModalPerfil(false);
+            alert("Perfil actualizado correctamente en la base de datos.");
+        } catch (error) {
+            console.error("Error guardando perfil:", error);
+            alert(`No se pudo guardar el perfil: ${error.message}`);
+        }
     };
 
     // GUARDAR PERFIL DEPORTIVO
@@ -131,6 +336,37 @@ export default function PerfilJugador() {
 
     return (
         <>
+            {/* MODAL PARA EDITAR DATOS PERSONALES */}
+            {mostrarModalPerfil && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-8">
+                        <h2 className="text-2xl font-black text-slate-800 mb-6">Editar mi perfil</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block font-semibold text-slate-700 mb-1">Nombre completo</label>
+                                <input value={perfil.nombre} onChange={(e) => setPerfil({ ...perfil, nombre: e.target.value })} className="w-full border rounded-xl p-3 text-gray-800" />
+                            </div>
+                            <div>
+                                <label className="block font-semibold text-slate-700 mb-1">Correo electrónico</label>
+                                <input type="email" value={perfil.correo} onChange={(e) => setPerfil({ ...perfil, correo: e.target.value })} className="w-full border rounded-xl p-3 text-gray-800" />
+                            </div>
+                            <div>
+                                <label className="block font-semibold text-slate-700 mb-1">Teléfono</label>
+                                <input value={perfil.telefono} onChange={(e) => setPerfil({ ...perfil, telefono: e.target.value })} className="w-full border rounded-xl p-3 text-gray-800" />
+                            </div>
+                            <div>
+                                <label className="block font-semibold text-slate-700 mb-1">Ciudad</label>
+                                <input value={perfil.ciudad} onChange={(e) => setPerfil({ ...perfil, ciudad: e.target.value })} className="w-full border rounded-xl p-3 text-gray-800" />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button onClick={() => setMostrarModalPerfil(false)} className="px-5 py-3 rounded-xl border font-semibold text-gray-700">Cancelar</button>
+                            <button onClick={guardarPerfil} className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold">Guardar cambios</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* MODAL EDITAR PERFIL DEPORTIVO */}
             {mostrarPerfilDeportivo && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -292,7 +528,7 @@ export default function PerfilJugador() {
                                     alt="Foto de perfil"
                                     width={150}
                                     height={150}
-                                    unoptimized={fotoPerfil.startsWith("data:")}
+                                    unoptimized={fotoPerfil.startsWith("data:") || fotoPerfil.startsWith("http://") || fotoPerfil.startsWith("https://")}
                                     className="w-[150px] h-[150px] rounded-full border-4 border-white object-cover shadow-xl bg-gray-200"
                                 />
                                 <input
@@ -568,13 +804,21 @@ export default function PerfilJugador() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-gray-600 text-sm">Promedio</p>
-                                <h2 className="text-4xl font-black text-gray-800 mt-2">5.0</h2>
+                                <h2 className="text-4xl font-black text-gray-800 mt-2">
+                                    {promedioCalificacion === null
+                                        ? "—"
+                                        : Number(promedioCalificacion).toFixed(1)}
+                                </h2>
                             </div>
+
                             <div className="w-14 h-14 rounded-2xl bg-yellow-100 flex items-center justify-center">
                                 <Star className="text-yellow-500" size={28} />
                             </div>
                         </div>
-                        <p className="mt-4 font-bold text-[#ca8a04] text-sm">Calificación otorgada</p>
+
+                        <p className="mt-4 font-bold text-[#ca8a04] text-sm">
+                            Calificación otorgada
+                        </p>
                     </div>
 
                     <div className="bg-white rounded-3xl border border-green-200 shadow-md p-6">
