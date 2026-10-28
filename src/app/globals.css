@@ -48,3 +48,6 @@ body {
   animation: fadeIn .3s ease;
 
 }
+html {
+  scroll-behavior: smooth;
+}

@@ -6,39 +6,25 @@ import NavBar from "@/app/components/publico/NavBar";
 import ContenidoPrincipal from "@/app/components/publico/ContenidoPrincipal";
 import Footer from "@/app/components/publico/Footer";
 import SplashScreen from "./components/publico/SplashScreen";
-
+import ComoFunciona from "@/app/components/publico/como_funciona";
 export default function Home() {
+  const [mostrarSplash, setMostrarSplash] = useState(true);
 
-
-    const [mostrarSplash, setMostrarSplash] = useState(true);
-
-    return (
-
+  return (
+    <>
+      {mostrarSplash ? (
+        <SplashScreen onFinish={() => setMostrarSplash(false)} />
+      ) : (
         <>
+          <NavBar />
 
-            {mostrarSplash ? (
+          <ContenidoPrincipal />
+          
+          <ComoFunciona />
 
-                <SplashScreen
-                    onFinish={() => setMostrarSplash(false)}
-                />
-
-            ) : (
-
-                <>
-
-                    <NavBar />
-
-                    <ContenidoPrincipal />
-
-                    <Footer />
-
-                </>
-
-            )}
-
+          <Footer />
         </>
-
-    );
-
+      )}
+    </>
+  );
 }
-

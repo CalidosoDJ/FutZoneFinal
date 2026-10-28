@@ -9,7 +9,7 @@ export default function LoginComponent() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
 
-  //rol admin
+  // Crear el administrador inicial si todavía no existe.
   useEffect(() => {
     const adminExiste = localStorage.getItem("admin");
 
@@ -30,30 +30,55 @@ export default function LoginComponent() {
   const iniciarSesion = (e) => {
     e.preventDefault();
 
-    // LOGIN DEL ÁRBITRO: validar una cuenta registrada
+    const correoIngresado = correo.trim().toLowerCase();
+    const passwordIngresada = password;
+
+    // 1. VALIDAR ADMINISTRADOR
+    const adminGuardado = localStorage.getItem("admin");
+    const admin = adminGuardado ? JSON.parse(adminGuardado) : null;
+
+    if (
+      admin &&
+      admin.correo?.trim().toLowerCase() === correoIngresado &&
+      admin.password === passwordIngresada
+    ) {
+      localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
+
+      router.push("/admin");
+      return;
+    }
+
+    // 2. VALIDAR ÁRBITRO REGISTRADO
     const usuariosArbitro = JSON.parse(
       localStorage.getItem("usuariosArbitro") || "[]",
     );
 
     const arbitroEncontrado = usuariosArbitro.find(
       (arbitro) =>
-        arbitro.correo?.trim().toLowerCase() === correo.trim().toLowerCase() &&
-        arbitro.password === password &&
+        arbitro.correo?.trim().toLowerCase() === correoIngresado &&
+        arbitro.password === passwordIngresada &&
         arbitro.rol === "arbitro",
     );
 
     if (arbitroEncontrado) {
-      localStorage.setItem("arbitroSesion", JSON.stringify(arbitroEncontrado));
+      localStorage.setItem(
+        "arbitroSesion",
+        JSON.stringify(arbitroEncontrado),
+      );
 
       router.push("/arbitro/dashboard");
       return;
     }
 
-    // LOGIN DE LOS USUARIOS REGISTRADOS
-    const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+    // 3. VALIDAR USUARIO REGISTRADO
+    const usuarios = JSON.parse(
+      localStorage.getItem("usuarios") || "[]",
+    );
 
     const usuarioEncontrado = usuarios.find(
-      (u) => u.correo === correo && u.password === password,
+      (usuario) =>
+        usuario.correo?.trim().toLowerCase() === correoIngresado &&
+        usuario.password === passwordIngresada,
     );
 
     if (usuarioEncontrado) {
@@ -62,34 +87,12 @@ export default function LoginComponent() {
         JSON.stringify(usuarioEncontrado),
       );
 
-      const admin = JSON.parse(localStorage.getItem("admin"));
-
-      if (admin && admin.correo === correo && admin.password === password) {
-        localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
-
-        router.push("/admin");
-        return;
-      }
-
-      const usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
-
-      const usuarioEncontrado = usuarios.find(
-        (u) => u.correo === correo && u.password === password,
-      );
-      if (usuarioEncontrado) {
-        localStorage.setItem(
-          "usuarioLogueado",
-          JSON.stringify(usuarioEncontrado),
-        );
-        router.push("/dashboard");
-      } else {
-        alert("Correo o contraseña incorrectos");
-      }
-
       router.push("/dashboard");
-    } else {
-      alert("Correo o contraseña incorrectos");
+      return;
     }
+
+    // 4. SI NO COINCIDE NINGUNA CUENTA
+    alert("Correo o contraseña incorrectos");
   };
 
   return (
@@ -103,31 +106,43 @@ export default function LoginComponent() {
               Fut<span className="text-green-500">Zone</span>
             </h1>
 
-            <p className="text-black text-xl">Inicia sesión para continuar</p>
+            <p className="text-black text-xl">
+              Inicia sesión para continuar
+            </p>
           </div>
 
           {/* Correo */}
-          <div className="mb-1">
-            <label className="text-black block mb-2">Correo</label>
+          <div className="mb-5">
+            <label htmlFor="correo" className="text-black block mb-2">
+              Correo
+            </label>
 
             <input
+              id="correo"
               type="email"
-              placeholder="Ingrese su Correo Electrónico"
+              placeholder="Ingrese su correo electrónico"
               value={correo}
               onChange={(e) => setCorreo(e.target.value)}
+              autoComplete="email"
+              required
               className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
             />
           </div>
 
           {/* Contraseña */}
           <div className="mb-8">
-            <label className="text-white block mb-2">Contraseña</label>
+            <label htmlFor="password" className="text-black block mb-2">
+              Contraseña
+            </label>
 
             <input
+              id="password"
               type="password"
-              placeholder="Ingrese su Contraseña"
+              placeholder="Ingrese su contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
               className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
             />
           </div>
@@ -137,18 +152,19 @@ export default function LoginComponent() {
             type="submit"
             className="w-full bg-green-600 hover:bg-green-700 transition text-white p-4 rounded-2xl text-lg font-semibold"
           >
-            Iniciar Sesión
+            Iniciar sesión
           </button>
 
-          {/* Register */}
-          <p className="text-gray-400 mt-6 text-center">
+          {/* Registro */}
+          <p className="text-gray-500 mt-6 text-center">
             ¿No tienes cuenta?{" "}
-            <span
+            <button
+              type="button"
               onClick={() => router.push("/register")}
-              className="text-green-500 cursor-pointer hover:text-green-400"
+              className="text-green-600 cursor-pointer hover:text-green-700 font-semibold"
             >
               Regístrate
-            </span>
+            </button>
           </p>
         </form>
       </div>
@@ -165,9 +181,9 @@ export default function LoginComponent() {
 
         {/* Texto */}
         <div className="relative z-10 flex flex-col justify-end p-16 text-white">
-          <h1 className="text-6xl font-bold mb-5 leading-tight">
+          <h2 className="text-6xl font-bold mb-5 leading-tight">
             Vive la pasión del fútbol
-          </h1>
+          </h2>
 
           <p className="text-xl text-gray-300 max-w-xl">
             Reserva canchas, organiza torneos y disfruta la mejor experiencia
