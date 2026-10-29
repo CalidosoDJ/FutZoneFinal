@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, House } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginComponent() {
   const router = useRouter();
@@ -123,6 +124,20 @@ export default function LoginComponent() {
     <section className="min-h-screen flex bg-black">
       <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-8 py-8">
         <form onSubmit={iniciarSesion} className="w-full max-w-lg">
+
+          {/* VOLVER AL HOME */}
+          <Link
+            href="/?omitirSplash=true"
+            aria-label="Volver al inicio"
+            title="Volver al inicio"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors mb-6"
+          >
+            <House size={22} />
+            <span className="text-sm font-semibold">
+              Volver al inicio
+            </span>
+          </Link>
+
           <div className="mb-8">
             <h1 className="text-5xl font-bold text-gray-900 mb-3">
               Fut<span className="text-green-500">Zone</span>

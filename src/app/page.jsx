@@ -1,8 +1,7 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import NavBar from "@/app/components/publico/NavBar";
 import ContenidoPrincipal from "@/app/components/publico/ContenidoPrincipal";
@@ -10,9 +9,15 @@ import ComoFunciona from "@/app/components/publico/como_funciona";
 import Footer from "@/app/components/publico/Footer";
 import SplashScreen from "./components/publico/SplashScreen";
 
-export default function Home() {
+function ContenidoHome() {
   const router = useRouter();
-  const [mostrarSplash, setMostrarSplash] = useState(true);
+  const searchParams = useSearchParams();
+
+  const omitirSplash = searchParams.get("omitirSplash") === "true";
+
+  const [splashFinalizado, setSplashFinalizado] = useState(false);
+
+  const mostrarSplash = !omitirSplash && !splashFinalizado;
 
   // Validar si existe una sesión activa
   useEffect(() => {
@@ -40,20 +45,23 @@ export default function Home() {
   return (
     <>
       {mostrarSplash ? (
-        <SplashScreen
-          onFinish={() => setMostrarSplash(false)}
-        />
+        <SplashScreen onFinish={() => setSplashFinalizado(true)} />
       ) : (
         <>
           <NavBar />
-
           <ContenidoPrincipal />
-
           <ComoFunciona />
-
           <Footer />
         </>
       )}
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <ContenidoHome />
+    </Suspense>
   );
 }

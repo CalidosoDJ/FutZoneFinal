@@ -1,8 +1,11 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { House } from "lucide-react";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 
@@ -130,6 +133,19 @@ export default function RegisterForm() {
           onSubmit={registrarUsuario}
           className="w-full max-w-md my-auto flex flex-col justify-center"
         >
+          {/* VOLVER A LA PÁGINA PRINCIPAL */}
+          <Link
+            href="/?omitirSplash=true"
+            aria-label="Volver al inicio"
+            title="Volver al inicio"
+            className="inline-flex items-center gap-2 self-start text-gray-600 hover:text-green-600 transition-colors mb-4"
+          >
+            <House size={22} />
+            <span className="text-sm font-semibold">
+              Volver al inicio
+            </span>
+          </Link>
+
           <div className="mb-3">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
               Fut<span className="text-green-600">Zone</span>
