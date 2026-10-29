@@ -1,6 +1,6 @@
 "use client";
 
-import MapaComponent from "@/app/components/publico/MapaComponent";
+import MapaCliente from "./MapaCliente";
 
 export default function UbicacionPage() {
 
@@ -26,7 +26,7 @@ export default function UbicacionPage() {
                 </div>
             </div>
 
-            <MapaComponent />
+            <MapaCliente />
 
         </div>
     );

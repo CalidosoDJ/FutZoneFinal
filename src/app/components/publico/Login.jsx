@@ -1,16 +1,39 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginComponent() {
   const router = useRouter();
 
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
-  // Crear el administrador inicial si todavía no existe.
   useEffect(() => {
+    const sesion = localStorage.getItem("usuarioLogueado");
+    const sesionArbitro = localStorage.getItem("arbitroSesion");
+
+    if (sesion) {
+      const usuario = JSON.parse(sesion);
+
+      if (usuario.rol === "admin") {
+        router.replace("/admin");
+      } else if (usuario.rol === "arbitro") {
+        router.replace("/arbitro/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
+      return;
+    }
+
+    if (sesionArbitro) {
+      router.replace("/arbitro/dashboard");
+      return;
+    }
+
     const adminExiste = localStorage.getItem("admin");
 
     if (!adminExiste) {
@@ -25,98 +48,94 @@ export default function LoginComponent() {
 
       localStorage.setItem("admin", JSON.stringify(admin));
     }
-  }, []);
+  }, [router]);
 
   const iniciarSesion = (e) => {
     e.preventDefault();
 
     const correoIngresado = correo.trim().toLowerCase();
-    const passwordIngresada = password;
 
-    // 1. VALIDAR ADMINISTRADOR
-    const adminGuardado = localStorage.getItem("admin");
-    const admin = adminGuardado ? JSON.parse(adminGuardado) : null;
+    // ADMINISTRADOR
+    const admin = JSON.parse(localStorage.getItem("admin") || "null");
 
     if (
       admin &&
       admin.correo?.trim().toLowerCase() === correoIngresado &&
-      admin.password === passwordIngresada
+      admin.password === password
     ) {
       localStorage.setItem("usuarioLogueado", JSON.stringify(admin));
-
-      router.push("/admin");
+      router.replace("/admin");
       return;
     }
 
-    // 2. VALIDAR ÁRBITRO REGISTRADO
+    // ÁRBITROS REGISTRADOS
     const usuariosArbitro = JSON.parse(
-      localStorage.getItem("usuariosArbitro") || "[]",
+      localStorage.getItem("usuariosArbitro") || "[]"
     );
 
     const arbitroEncontrado = usuariosArbitro.find(
       (arbitro) =>
         arbitro.correo?.trim().toLowerCase() === correoIngresado &&
-        arbitro.password === passwordIngresada &&
-        arbitro.rol === "arbitro",
+        arbitro.password === password &&
+        arbitro.rol === "arbitro"
     );
 
     if (arbitroEncontrado) {
-      localStorage.setItem(
-        "arbitroSesion",
-        JSON.stringify(arbitroEncontrado),
-      );
-
-      router.push("/arbitro/dashboard");
+      localStorage.setItem("arbitroSesion", JSON.stringify(arbitroEncontrado));
+      localStorage.setItem("usuarioLogueado", JSON.stringify(arbitroEncontrado));
+      router.replace("/arbitro/dashboard");
       return;
     }
 
-    // 3. VALIDAR USUARIO REGISTRADO
-    const usuarios = JSON.parse(
-      localStorage.getItem("usuarios") || "[]",
-    );
+    // ÁRBITRO DE PRUEBA (MAIN)
+    if (correoIngresado === "arbitro@futzone.com" && password === "123") {
+      const arbitro = {
+        nombre: "Árbitro FutZone",
+        correo: "arbitro@futzone.com",
+        rol: "arbitro",
+      };
+
+      localStorage.setItem("arbitroSesion", JSON.stringify(arbitro));
+      localStorage.setItem("usuarioLogueado", JSON.stringify(arbitro));
+      router.replace("/arbitro/dashboard");
+      return;
+    }
+
+    // USUARIOS REGISTRADOS
+    const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
 
     const usuarioEncontrado = usuarios.find(
       (usuario) =>
         usuario.correo?.trim().toLowerCase() === correoIngresado &&
-        usuario.password === passwordIngresada,
+        usuario.password === password
     );
 
     if (usuarioEncontrado) {
-      localStorage.setItem(
-        "usuarioLogueado",
-        JSON.stringify(usuarioEncontrado),
-      );
-
-      router.push("/dashboard");
+      localStorage.setItem("usuarioLogueado", JSON.stringify(usuarioEncontrado));
+      router.replace("/dashboard");
       return;
     }
 
-    // 4. SI NO COINCIDE NINGUNA CUENTA
     alert("Correo o contraseña incorrectos");
   };
 
   return (
     <section className="min-h-screen flex bg-black">
-      {/* FORMULARIO */}
-      <div className="w-full lg:w-[40%] bg-white flex items-center justify-center p-8">
-        <form onSubmit={iniciarSesion} className="w-full max-w-md">
-          {/* Logo */}
-          <div className="mb-10">
+      <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-8 py-8">
+        <form onSubmit={iniciarSesion} className="w-full max-w-lg">
+          <div className="mb-8">
             <h1 className="text-5xl font-bold text-gray-900 mb-3">
               Fut<span className="text-green-500">Zone</span>
             </h1>
-
             <p className="text-black text-xl">
               Inicia sesión para continuar
             </p>
           </div>
 
-          {/* Correo */}
-          <div className="mb-5">
+          <div className="mb-6">
             <label htmlFor="correo" className="text-black block mb-2">
               Correo
             </label>
-
             <input
               id="correo"
               type="email"
@@ -129,25 +148,34 @@ export default function LoginComponent() {
             />
           </div>
 
-          {/* Contraseña */}
           <div className="mb-8">
-            <label htmlFor="password" className="text-black block mb-2">
+            <label htmlFor="password" className="text-black block mb-2 font-medium">
               Contraseña
             </label>
 
-            <input
-              id="password"
-              type="password"
-              placeholder="Ingrese su contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
-            />
+            <div className="relative flex items-center">
+              <input
+                id="password"
+                type={mostrarPassword ? "text" : "password"}
+                placeholder="Ingrese su contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className="w-full bg-gray-300 border border-black text-black p-4 pr-12 rounded-2xl outline-none focus:border-gray-950 transition"
+              />
+
+              <button
+                type="button"
+                onClick={() => setMostrarPassword(!mostrarPassword)}
+                aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                className="absolute right-4 text-gray-700 hover:text-black cursor-pointer p-1"
+              >
+                {mostrarPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+              </button>
+            </div>
           </div>
 
-          {/* Botón */}
           <button
             type="submit"
             className="w-full bg-green-600 hover:bg-green-700 transition text-white p-4 rounded-2xl text-lg font-semibold"
@@ -155,7 +183,6 @@ export default function LoginComponent() {
             Iniciar sesión
           </button>
 
-          {/* Registro */}
           <p className="text-gray-500 mt-6 text-center">
             ¿No tienes cuenta?{" "}
             <button
@@ -169,22 +196,18 @@ export default function LoginComponent() {
         </form>
       </div>
 
-      {/* IMAGEN */}
       <div
         className="hidden lg:flex lg:w-[60%] bg-cover bg-center relative"
         style={{
           backgroundImage: "url('/images/login3.avif')",
         }}
       >
-        {/* Overlay */}
         <div className="absolute inset-0 bg-black/50"></div>
 
-        {/* Texto */}
         <div className="relative z-10 flex flex-col justify-end p-16 text-white">
           <h2 className="text-6xl font-bold mb-5 leading-tight">
             Vive la pasión del fútbol
           </h2>
-
           <p className="text-xl text-gray-300 max-w-xl">
             Reserva canchas, organiza torneos y disfruta la mejor experiencia
             deportiva con FutZone.

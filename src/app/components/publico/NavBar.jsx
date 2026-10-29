@@ -27,7 +27,7 @@ export default function NavBar() {
       {/* Menú */}
       <ul className="hidden md:flex items-center gap-10 text-lg font-medium">
 
-        
+
 
 
 

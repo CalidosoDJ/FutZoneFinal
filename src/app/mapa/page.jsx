@@ -1,5 +1,5 @@
-import MapaCanchas from "@/app/components/publico/MapaCanchas";
+import MapaCliente from "./MapaCliente";
 
 export default function Page() {
-    return <MapaCanchas />;
+    return <MapaCliente />;
 }

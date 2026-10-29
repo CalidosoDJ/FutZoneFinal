@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,22 +10,45 @@ import {
     Star,
     MapPin,
 } from "lucide-react";
+function suscribirReservas(callback) {
+    window.addEventListener("storage", callback);
+    window.addEventListener("futzone:reservas", callback);
 
+    return () => {
+        window.removeEventListener("storage", callback);
+        window.removeEventListener("futzone:reservas", callback);
+    };
+}
+
+function obtenerReservas() {
+    return localStorage.getItem("reservas");
+}
+
+function obtenerReservasServidor() {
+    return null;
+}
 export default function ReservaCard() {
 
 
 
-    useEffect(() => {
-
-        const datos = JSON.parse(localStorage.getItem("reservas")) || [];
-
-        setReservas(datos);
-
-    }, []);
     const [editando, setEditando] = useState(null);
-    const [nuevaFecha, setNuevaFecha] = useState("");
-    const [nuevaHora, setNuevaHora] = useState("");
-    const [reservas, setReservas] = useState([]);
+const [nuevaFecha, setNuevaFecha] = useState("");
+const [nuevaHora, setNuevaHora] = useState("");
+
+const datosReservas = useSyncExternalStore(
+    suscribirReservas,
+    obtenerReservas,
+    obtenerReservasServidor
+);
+
+let reservas = [];
+
+try {
+    const datos = datosReservas ? JSON.parse(datosReservas) : [];
+    reservas = Array.isArray(datos) ? datos : [];
+} catch {
+    reservas = [];
+}
 
 
 
@@ -36,7 +59,7 @@ export default function ReservaCard() {
             JSON.stringify(nuevasReservas)
         );
 
-        setReservas(nuevasReservas);
+      window.dispatchEvent(new Event("futzone:reservas"));
 
     };
 
@@ -196,7 +219,7 @@ export default function ReservaCard() {
                                     </span>
 
                                     <span className="font-semibold text-gray-800">
-                                        ${r.precio.toLocaleString("es-CO")}
+                                        ${(Number(r.precio) || 0).toLocaleString("es-CO")}
                                     </span>
                                 </div>
 
@@ -237,7 +260,7 @@ export default function ReservaCard() {
                                     <span className="text-green-600">
 
                                         ${(
-                                            r.precio +
+                                            (Number(r.precio) || 0) +
                                             (r.requiereArbitro ? 50000 : 0)
                                         ).toLocaleString("es-CO")}
 

@@ -1,43 +1,78 @@
 
 "use client";
 import { Bell, Search } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
+const notificacionesIniciales = [
+    {
+        id: 1,
+        tipo: "confirmada",
+        titulo: "Reserva confirmada",
+        mensaje: "Tu reserva para la Cancha Sintética Norte fue confirmada.",
+        fecha: "Hace 5 minutos",
+        leida: false,
+    },
+    {
+        id: 2,
+        tipo: "recordatorio",
+        titulo: "Tu partido inicia pronto",
+        mensaje: "Recuerda que tu partido comienza en 30 minutos.",
+        fecha: "Hoy - 5:30 PM",
+        leida: false,
+    },
+    {
+        id: 3,
+        tipo: "calificacion",
+        titulo: "Califica tu experiencia",
+        mensaje: "Tu partido finalizó. Ayúdanos calificando la cancha.",
+        fecha: "Hoy - 3:00 PM",
+        leida: false,
+    },
+    {
+        id: 4,
+        tipo: "promocion",
+        titulo: "Nueva promoción",
+        mensaje: "Obtén un 15% de descuento reservando antes de las 3:00 PM.",
+        fecha: "Ayer",
+        leida: true,
+    },
+];
 
+function suscribirNotificaciones(callback) {
+    window.addEventListener("storage", callback);
+    window.addEventListener("futzone:storage", callback);
+
+    return () => {
+        window.removeEventListener("storage", callback);
+        window.removeEventListener("futzone:storage", callback);
+    };
+}
+
+function obtenerNotificaciones() {
+    return localStorage.getItem("notificacionesJugador");
+}
+
+function obtenerNotificacionesServidor() {
+    return null;
+}
 export default function NotificacionesJugador() {
-    const [notificaciones, setNotificaciones] = useState([
-        {
-            id: 1,
-            tipo: "confirmada",
-            titulo: "Reserva confirmada",
-            mensaje: "Tu reserva para la Cancha Sintética Norte fue confirmada.",
-            fecha: "Hace 5 minutos",
-            leida: false,
-        },
-        {
-            id: 2,
-            tipo: "recordatorio",
-            titulo: "Tu partido inicia pronto",
-            mensaje: "Recuerda que tu partido comienza en 30 minutos.",
-            fecha: "Hoy - 5:30 PM",
-            leida: false,
-        },
-        {
-            id: 3,
-            tipo: "calificacion",
-            titulo: "Califica tu experiencia",
-            mensaje: "Tu partido finalizó. Ayúdanos calificando la cancha.",
-            fecha: "Hoy - 3:00 PM",
-            leida: false,
-        },
-        {
-            id: 4,
-            tipo: "promocion",
-            titulo: "Nueva promoción",
-            mensaje: "Obtén un 15% de descuento reservando antes de las 3:00 PM.",
-            fecha: "Ayer",
-            leida: true,
-        },
-    ]);
+    const datosNotificaciones = useSyncExternalStore(
+    suscribirNotificaciones,
+    obtenerNotificaciones,
+    obtenerNotificacionesServidor
+);
+
+let notificaciones = notificacionesIniciales;
+
+try {
+    if (datosNotificaciones !== null) {
+        const datos = JSON.parse(datosNotificaciones);
+        notificaciones = Array.isArray(datos)
+            ? datos
+            : notificacionesIniciales;
+    }
+} catch {
+    notificaciones = notificacionesIniciales;
+}
     const sinLeer = notificaciones.filter(
         item => !item.leida
     ).length;
@@ -52,25 +87,14 @@ export default function NotificacionesJugador() {
 
         );
 
-        setNotificaciones(nuevas);
-
+        window.dispatchEvent(new Event("futzone:storage"));
         localStorage.setItem(
             "notificacionesJugador",
             JSON.stringify(nuevas)
         );
 
     };
-    useEffect(() => {
-
-        const datos = localStorage.getItem("notificacionesJugador");
-
-        if (datos) {
-
-            setNotificaciones(JSON.parse(datos));
-
-        }
-
-    }, []);
+  
     return (
 
         <>

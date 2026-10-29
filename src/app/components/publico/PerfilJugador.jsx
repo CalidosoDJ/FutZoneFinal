@@ -15,105 +15,150 @@ import {
     Clock3
 } from "lucide-react";
 import { CalendarDays } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
+const perfilInicial = {
+    nombre: "",
+    correo: "",
+    telefono: "",
+    ciudad: "a",
+};
+
+const deportivoInicial = {
+    posicion: "Delantero",
+    pierna: "Derecha",
+    horario: "06:00 PM",
+    cancha: "Fútbol 6",
+    zona: "Norte",
+    nivel: "Intermedio",
+    modalidad: "Amistoso",
+    frecuencia: "2 veces/semana",
+};
+
+function suscribirPerfil(callback) {
+    window.addEventListener("storage", callback);
+    window.addEventListener("futzone:perfil", callback);
+
+    return () => {
+        window.removeEventListener("storage", callback);
+        window.removeEventListener("futzone:perfil", callback);
+    };
+}
+
+function obtenerDatosPerfil() {
+    return [
+        localStorage.getItem("perfilUsuario"),
+        localStorage.getItem("perfilDeportivo"),
+        localStorage.getItem("fotoPerfil"),
+    ].join("|||");
+}
+
+function obtenerDatosServidor() {
+    return null;
+}
 export default function PerfilJugador() {
 
-    const [mostrarModalPerfil, setMostrarModalPerfil] = useState(false);
+  
+const [mostrarModalPerfil, setMostrarModalPerfil] = useState(false);
+const [mostrarPerfilDeportivo, setMostrarPerfilDeportivo] = useState(false);
 
-    const [perfil, setPerfil] = useState({
-        nombre: "",
-        correo: "",
-        telefono: "",
-        ciudad: "a",
-    });
-    useEffect(() => {
+const datosGuardados = useSyncExternalStore(
+    suscribirPerfil,
+    obtenerDatosPerfil,
+    obtenerDatosServidor
+);
 
-        const datos = JSON.parse(localStorage.getItem("perfilUsuario"));
+const [perfilEditado, setPerfilEditado] = useState(null);
+const [deportivoEditado, setDeportivoEditado] = useState(null);
+const [fotoEditada, setFotoEditada] = useState(null);
 
-        if (datos) {
+let perfilGuardado = perfilInicial;
+let deportivoGuardado = deportivoInicial;
+let fotoGuardada = "/images/login.jpg";
 
-            setPerfil(datos);
+if (datosGuardados !== null) {
+    const [datosPerfil, datosDeportivos, datosFoto] =
+        datosGuardados.split("|||");
 
+    try {
+        if (datosPerfil) {
+            perfilGuardado = {
+                ...perfilInicial,
+                ...JSON.parse(datosPerfil),
+            };
         }
+    } catch {
+        perfilGuardado = perfilInicial;
+    }
 
-    }, []);
-    const guardarPerfil = () => {
-
-        localStorage.setItem(
-            "perfilUsuario",
-            JSON.stringify(perfil)
-        );
-
-        setMostrarModalPerfil(false);
-
-        alert("Perfil actualizado correctamente.");
-
-    };
-    const [mostrarPerfilDeportivo, setMostrarPerfilDeportivo] = useState(false);
-
-    const [perfilDeportivo, setPerfilDeportivo] = useState({
-        posicion: "Delantero",
-        pierna: "Derecha",
-        horario: "06:00 PM",
-        cancha: "Fútbol 6",
-        zona: "Norte",
-        nivel: "Intermedio",
-        modalidad: "Amistoso",
-        frecuencia: "2 veces/semana",
-    });
-    useEffect(() => {
-
-        const datos = JSON.parse(
-            localStorage.getItem("perfilDeportivo")
-        );
-
-        if (datos) {
-
-            setPerfilDeportivo(datos);
-
+    try {
+        if (datosDeportivos) {
+            deportivoGuardado = {
+                ...deportivoInicial,
+                ...JSON.parse(datosDeportivos),
+            };
         }
+    } catch {
+        deportivoGuardado = deportivoInicial;
+    }
 
-    }, []);
-    const guardarPerfilDeportivo = () => {
+    if (datosFoto) {
+        fotoGuardada = datosFoto;
+    }
+}
 
-        localStorage.setItem(
-            "perfilDeportivo",
-            JSON.stringify(perfilDeportivo)
-        );
+const perfil = perfilEditado ?? perfilGuardado;
+const perfilDeportivo = deportivoEditado ?? deportivoGuardado;
+const fotoPerfil = fotoEditada ?? fotoGuardada;
 
-        setMostrarPerfilDeportivo(false);
+const setPerfil = setPerfilEditado;
+const setPerfilDeportivo = setDeportivoEditado;
 
+const guardarPerfil = () => {
+    localStorage.setItem(
+        "perfilUsuario",
+        JSON.stringify(perfil)
+    );
+
+    setPerfilEditado(null);
+    setMostrarModalPerfil(false);
+    window.dispatchEvent(new Event("futzone:perfil"));
+
+    alert("Perfil actualizado correctamente.");
+};
+
+const guardarPerfilDeportivo = () => {
+    localStorage.setItem(
+        "perfilDeportivo",
+        JSON.stringify(perfilDeportivo)
+    );
+
+    setDeportivoEditado(null);
+    setMostrarPerfilDeportivo(false);
+    window.dispatchEvent(new Event("futzone:perfil"));
+};
+
+const cambiarFoto = (e) => {
+    const archivo = e.target.files?.[0];
+
+    if (!archivo) return;
+
+    const lector = new FileReader();
+
+    lector.onloadend = () => {
+        const nuevaFoto = lector.result;
+
+        if (typeof nuevaFoto !== "string") return;
+
+        setFotoEditada(nuevaFoto);
+        localStorage.setItem("fotoPerfil", nuevaFoto);
+        window.dispatchEvent(new Event("futzone:perfil"));
     };
-    const [fotoPerfil, setFotoPerfil] = useState("/images/login.jpg");
 
-    useEffect(() => {
-        const fotoGuardada = localStorage.getItem("fotoPerfil");
+    lector.readAsDataURL(archivo);
+};
 
-        if (fotoGuardada) {
-            setFotoPerfil(fotoGuardada);
-        }
-    }, []);
 
-    const cambiarFoto = (e) => {
-        const archivo = e.target.files?.[0];
-
-        if (!archivo) return;
-
-        const lector = new FileReader();
-
-        lector.onloadend = () => {
-            const nuevaFoto = lector.result;
-
-            setFotoPerfil(nuevaFoto);
-
-            localStorage.setItem(
-                "fotoPerfil",
-                nuevaFoto
-            );
-        };
-
-        lector.readAsDataURL(archivo);
-    };
+        
 
     return (
         <>
@@ -1249,6 +1294,6 @@ export default function PerfilJugador() {
         </>
 
     );
-
 }
+
 

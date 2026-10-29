@@ -1,60 +1,109 @@
+
 "use client";
 
-import { Bell, User, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
+import { Bell, User, LogOut } from "lucide-react";
+import { useEffect, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+
+// Notificar cambios de sesión y notificaciones
+const EVENTO_ALMACENAMIENTO = "futzone:storage";
+
+function suscribir(callback) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(EVENTO_ALMACENAMIENTO, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(EVENTO_ALMACENAMIENTO, callback);
+  };
+}
+
+// Lectura de datos almacenados
+function obtenerUsuario() {
+  return localStorage.getItem("usuarioLogueado");
+}
+
+function obtenerNotificaciones() {
+  return localStorage.getItem("notificacionesJugador");
+}
+
+// Valor inicial para renderizado del servidor
+function obtenerValorServidor() {
+  return null;
+}
 
 export default function DashboardNavbar() {
   const router = useRouter();
 
-  const [usuario, setUsuario] = useState(null);
-  const [sinLeer, setSinLeer] = useState(0);
+  const datosUsuario = useSyncExternalStore(
+    suscribir,
+    obtenerUsuario,
+    obtenerValorServidor
+  );
 
-  // Cargar el usuario que inició sesión.
-  useEffect(() => {
-    try {
-      const datos = localStorage.getItem("usuarioLogueado");
+  const datosNotificaciones = useSyncExternalStore(
+    suscribir,
+    obtenerNotificaciones,
+    obtenerValorServidor
+  );
 
-      if (datos) {
-        setUsuario(JSON.parse(datos));
-      }
-    } catch (error) {
-      console.error("Error al cargar el usuario:", error);
+  // Obtener usuario
+  let usuario = null;
+
+  try {
+    usuario = datosUsuario
+      ? JSON.parse(datosUsuario)
+      : null;
+  } catch (error) {
+    console.error("Error al cargar usuario:", error);
+  }
+
+  // Contar notificaciones sin leer
+  let sinLeer = 0;
+
+  try {
+    const lista = datosNotificaciones
+      ? JSON.parse(datosNotificaciones)
+      : [];
+
+    if (Array.isArray(lista)) {
+      sinLeer = lista.filter(
+        (item) => !item.leida
+      ).length;
     }
-  }, []);
+  } catch (error) {
+    console.error("Error al cargar notificaciones:", error);
+  }
 
-  // Cargar la cantidad de notificaciones sin leer.
+  // Verificar sesión activa
   useEffect(() => {
-    try {
-      const datos = localStorage.getItem("notificacionesJugador");
-
-      if (datos) {
-        const lista = JSON.parse(datos);
-
-        if (Array.isArray(lista)) {
-          setSinLeer(lista.filter((item) => !item.leida).length);
-        }
-      }
-    } catch (error) {
-      console.error("Error al cargar las notificaciones:", error);
+    if (datosUsuario === null) {
+      router.replace("/login");
     }
-  }, []);
+  }, [datosUsuario, router]);
 
-  // Cerrar sesión.
+  // Cerrar sesión
   const cerrarSesion = () => {
     localStorage.removeItem("usuarioLogueado");
-    router.push("/login");
+    localStorage.removeItem("arbitroSesion");
+
+    window.dispatchEvent(
+      new Event(EVENTO_ALMACENAMIENTO)
+    );
+
+    router.replace("/login");
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-950 text-white px-10 py-4 shadow-lg">
-      <div className="flex justify-between items-center">
-        {/* Logo */}
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => router.push("/dashboard")}
+    <nav className="sticky top-0 z-50 bg-gray-950 text-white px-4 md:px-10 py-4 shadow-lg">
+      <div className="flex justify-between items-center gap-4">
+
+        {/* LOGO */}
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3"
         >
           <Image
             src="/icons/futzone logo.jpeg"
@@ -64,56 +113,61 @@ export default function DashboardNavbar() {
             className="object-contain rounded-full"
           />
 
-          <h1 className="text-3xl font-bold">
-            Fut<span className="text-green-500">Zone</span>
+          <h1 className="text-2xl lg:text-3xl font-bold">
+            Fut
+            <span className="text-green-500">
+              Zone
+            </span>
           </h1>
-        </div>
+        </Link>
 
-        {/* Menú de navegación */}
-        <div className="hidden md:flex gap-8">
-          <button
-            onClick={() => router.push("/dashboard")}
+        {/* MENÚ DE NAVEGACIÓN */}
+        <div className="hidden md:flex items-center gap-6 lg:gap-8">
+
+          <Link
+            href="/dashboard"
             className="hover:text-green-500 transition"
           >
             Dashboard
-          </button>
+          </Link>
 
-          <button
-            onClick={() => router.push("/mis-reservas")}
+          <Link
+            href="/mis-reservas"
             className="hover:text-green-500 transition"
           >
             Mis Reservas
-          </button>
+          </Link>
 
-          <button
-            onClick={() => router.push("/canchas")}
+          <Link
+            href="/canchas"
             className="hover:text-green-500 transition"
           >
             Canchas
-          </button>
+          </Link>
 
-          <button
-            onClick={() => router.push("/mapa")}
+          <Link
+            href="/mapa"
             className="hover:text-green-500 transition"
           >
             Mapa
-          </button>
+          </Link>
 
-          <button
-            onClick={() => router.push("/perfil")}
+          <Link
+            href="/perfil"
             className="hover:text-green-500 transition"
           >
             Mi Perfil
-          </button>
+          </Link>
         </div>
 
-        {/* Acciones del usuario */}
-        <div className="flex items-center gap-5">
-          {/* Notificaciones */}
+        {/* ACCIONES DEL USUARIO */}
+        <div className="flex items-center gap-3 lg:gap-5">
+
+          {/* NOTIFICACIONES */}
           <Link
             href="/notificaciones"
             aria-label={`Notificaciones, ${sinLeer} sin leer`}
-            className="relative cursor-pointer"
+            className="relative"
           >
             <Bell
               size={24}
@@ -121,34 +175,38 @@ export default function DashboardNavbar() {
             />
 
             {sinLeer > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center">
                 {sinLeer}
               </span>
             )}
           </Link>
 
-          {/* Avatar */}
+          {/* AVATAR */}
           <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
             <User size={20} />
           </div>
 
-          {/* Nombre del usuario */}
+          {/* INFORMACIÓN DEL USUARIO */}
           <div className="hidden md:block">
             <p className="font-semibold">
               {usuario?.nombre || "Usuario"}
             </p>
 
-            <p className="text-xs text-gray-400">Usuario</p>
+            <p className="text-xs text-gray-400 capitalize">
+              {usuario?.rol || "Usuario"}
+            </p>
           </div>
 
-          {/* Cerrar sesión */}
+          {/* CERRAR SESIÓN */}
           <button
             type="button"
             onClick={cerrarSesion}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl transition"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-3 lg:px-4 py-2 rounded-xl transition cursor-pointer"
           >
             <LogOut size={18} />
-            Salir
+            <span className="hidden sm:inline">
+              Salir
+            </span>
           </button>
         </div>
       </div>
