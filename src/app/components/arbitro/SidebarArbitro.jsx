@@ -22,9 +22,11 @@ export default function SidebarArbitro() {
   const sinLeerCount = notificaciones?.filter((n) => !n.leida).length || 0;
 
   const handleCerrarSesion = () => {
-    // Redirigir al login o landing
-    router.push("/");
-  };
+  localStorage.removeItem("arbitroSesion");
+  localStorage.removeItem("usuarioLogueado");
+
+  router.replace("/?omitirSplash=true");
+};
 
   const menu = [
     {

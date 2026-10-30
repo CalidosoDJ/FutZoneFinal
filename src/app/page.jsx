@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import NavBar from "@/app/components/publico/NavBar";
@@ -18,7 +18,22 @@ function ContenidoHome() {
   const [splashFinalizado, setSplashFinalizado] = useState(false);
 
   const mostrarSplash = !omitirSplash && !splashFinalizado;
+  const seccionInicializada = useRef(false);
 
+  useEffect(() => {
+    if (mostrarSplash || seccionInicializada.current) return;
+
+    if (window.location.hash === "#como-funciona") {
+      seccionInicializada.current = true;
+
+      requestAnimationFrame(() => {
+        document.getElementById("como-funciona")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  }, [mostrarSplash]);
   // Validar si existe una sesión activa
   useEffect(() => {
     const datosUsuario = localStorage.getItem("usuarioLogueado");

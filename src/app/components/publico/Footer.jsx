@@ -21,15 +21,18 @@ export default function Footer() {
 
             <ul className="space-y-3 text-gray-400">
               <li>
-                <Link href="/" className="hover:text-blue-400 transition">
+                <Link
+                  href="/?omitirSplash=true"
+                  className="hover:text-green-400 transition"
+                >
                   Inicio
                 </Link>
               </li>
 
               <li>
                 <Link
-                  href="/mis-canchas"
-                  className="hover:text-blue-400 transition"
+                  href="/canchas"
+                  className="hover:text-green-400 transition"
                 >
                   Lista de Canchas
                 </Link>
@@ -37,8 +40,8 @@ export default function Footer() {
 
               <li>
                 <Link
-                  href="/torneos"
-                  className="hover:text-blue-400 transition"
+                  href="/nosotros"
+                  className="hover:text-green-400 transition"
                 >
                   Sobre Nosotros
                 </Link>

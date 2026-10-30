@@ -25,13 +25,8 @@ export default function NavBar() {
       </div>
 
       {/* Menú */}
-      <ul className="hidden md:flex items-center gap-10 text-lg font-medium">
-
-
-
-
-
-      </ul>
+<ul className="hidden md:flex items-center gap-10 text-lg font-medium">
+</ul>
 
       {/* Botones */}
       <AuthButtons />
