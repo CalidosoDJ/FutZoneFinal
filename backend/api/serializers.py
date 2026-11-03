@@ -8,7 +8,16 @@ from rest_framework import serializers
 from rest_framework import serializers
 from .models import Pagos
 from .models import Canchas, Sede, Usuarios, Reservas
+from rest_framework import serializers
+from .models import Notificaciones
+from rest_framework import serializers
+from .models import Publicaciones
 
+
+class PublicacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Publicaciones
+        fields = "__all__"
 
 class CanchaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -278,3 +287,29 @@ class PagoSerializer(serializers.ModelSerializer):
             data["monto"] = reserva.total
 
         return data
+
+
+
+
+class NotificacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificaciones
+        fields = [
+            "id_notificacion",
+            "id_usuario",
+            "titulo",
+            "mensaje",
+            "tipo",
+            "id_referencia",
+            "leido",
+            "fecha_envio",
+        ]
+        read_only_fields = [
+            "id_notificacion",
+            "id_usuario",
+            "titulo",
+            "mensaje",
+            "tipo",
+            "id_referencia",
+            "fecha_envio",
+        ]

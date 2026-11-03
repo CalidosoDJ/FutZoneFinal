@@ -12,77 +12,97 @@ export default function LoginComponent() {
     const [mostrarPassword, setMostrarPassword] = useState(false);
     const [cargando, setCargando] = useState(false);
 
-    const iniciarSesion = async (e) => {
-        e.preventDefault();
+    
+const iniciarSesion = async (e) => {
+    e.preventDefault();
 
-        if (!correo || !password) {
-            alert("Por favor ingresa el correo y la contraseña.");
+    if (!correo || !password) {
+        alert("Por favor ingresa el correo y la contraseña.");
+        return;
+    }
+
+    setCargando(true);
+
+    try {
+        const respuesta = await fetch(
+            "http://127.0.0.1:8000/api/login/",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: correo,
+                    password: password,
+                }),
+            }
+        );
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+            alert(
+                datos.non_field_errors?.[0] ||
+                datos.detail ||
+                "Correo o contraseña incorrectos"
+            );
             return;
         }
 
-        setCargando(true);
+        const usuario = datos.usuario;
 
-        try {
-            const respuesta = await fetch(
-                "http://127.0.0.1:8000/api/login/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        email: correo,
-                        password: password,
-                    }),
-                }
-            );
-
-            const datos = await respuesta.json();
-
-            if (!respuesta.ok) {
-                alert(
-                    datos.non_field_errors?.[0] ||
-                    datos.detail ||
-                    "Correo o contraseña incorrectos"
-                );
-                return;
-            }
-
-            const usuario = datos.usuario;
-
-            if (!usuario) {
-                alert("El servidor no devolvió los datos del usuario.");
-                return;
-            }
-
-            console.log("Usuario recibido de Django:", usuario);
-
-            localStorage.setItem(
-                "usuarioLogueado",
-                JSON.stringify(usuario)
-            );
-
-            alert("Inicio de sesión exitoso");
-
-            if (usuario.id_rol === 1) {
-                router.push("/admin");
-                return;
-            }
-
-            if (usuario.id_rol === 3) {
-                router.push("/arbitro/dashboard");
-                return;
-            }
-
-            router.push("/dashboard");
-        } catch (error) {
-            console.error("Error al iniciar sesión:", error);
-
-            alert("No se pudo conectar con el servidor Django.");
-        } finally {
-            setCargando(false);
+        if (!usuario) {
+            alert("El servidor no devolvió los datos del usuario.");
+            return;
         }
-    };
+
+        // Normalizar el rol
+        const idRol = Number(
+            typeof usuario.id_rol === "object"
+                ? usuario.id_rol?.id_rol ?? usuario.id_rol?.id
+                : usuario.id_rol
+        );
+
+        // Guardar sesión con rol normalizado
+        const usuarioSesion = {
+            ...usuario,
+            id_rol: idRol,
+        };
+
+        localStorage.setItem(
+            "usuarioLogueado",
+            JSON.stringify(usuarioSesion)
+        );
+
+        console.log("Sesión guardada:", usuarioSesion);
+
+        alert("Inicio de sesión exitoso");
+
+        // REDIRECCIONES
+        if (idRol === 1) {
+            router.push("/admin");
+            return;
+        }
+
+        if (idRol === 3) {
+            router.push("/arbitro/dashboard");
+            return;
+        }
+
+        if (idRol === 2) {
+            router.push("/dashboard");
+            return;
+        }
+
+        router.push("/dashboard");
+
+    } catch (error) {
+        console.error("Error al iniciar sesión:", error);
+        alert("No se pudo conectar con el servidor Django.");
+    } finally {
+        setCargando(false);
+    }
+};
 
     return (
         <section className="min-h-screen flex bg-black">

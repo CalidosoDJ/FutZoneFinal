@@ -55,11 +55,24 @@ class ArbitroPartidos(models.Model):
 
 class Canchas(models.Model):
     id_cancha = models.AutoField(primary_key=True)
-    id_sede = models.ForeignKey('Sede', models.DO_NOTHING, db_column='id_sede')
-    id_tipo = models.ForeignKey('TiposCancha', models.DO_NOTHING, db_column='id_tipo')
+    id_sede = models.ForeignKey(
+        'Sede',
+        models.DO_NOTHING,
+        db_column='id_sede'
+    )
+    id_tipo = models.ForeignKey(
+        'TiposCancha',
+        models.DO_NOTHING,
+        db_column='id_tipo'
+    )
     nombre = models.CharField(max_length=100)
     precio_hora = models.DecimalField(max_digits=10, decimal_places=2)
     estado = models.CharField(max_length=13, blank=True, null=True)
+    imagen_url = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True
+    )
 
     class Meta:
         managed = False

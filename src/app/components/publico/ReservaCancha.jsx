@@ -142,7 +142,23 @@ export default function ReservaCancha({ cancha }) {
             return;
         }
 
-        if (Number(usuarioLogueado.id_rol) !== 2) {
+        // Obtener el rol real del usuario
+        const rolUsuario =
+            usuarioLogueado.id_rol?.id_rol ??
+            usuarioLogueado.id_rol?.id ??
+            usuarioLogueado.id_rol ??
+            usuarioLogueado.rol?.id_rol ??
+            usuarioLogueado.rol?.id;
+
+        // Convertir el rol a número
+        const idRol = Number(rolUsuario);
+      
+        console.log("Rol original:", usuarioLogueado.id_rol);
+        console.log("Usuario conectado:", usuarioLogueado);
+        console.log("Rol detectado:", idRol);
+
+        // Validar que sea jugador
+        if (idRol !== 2) {
             alert("Debes ingresar con una cuenta de jugador.");
             return;
         }

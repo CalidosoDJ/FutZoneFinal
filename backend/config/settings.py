@@ -15,7 +15,12 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import os
+from dotenv import load_dotenv
 
+load_dotenv(BASE_DIR / ".env")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
@@ -85,7 +90,7 @@ DATABASES = {
         'NAME': 'futzone',
         'USER': 'futzone_user',
         'PASSWORD': 'futzone123',
-        'HOST': 'localhost',
+        'HOST': '127.0.0.1',
         'PORT': '3307',
     }
 }
@@ -137,3 +142,6 @@ MAILERS = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
