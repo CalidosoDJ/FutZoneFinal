@@ -14,23 +14,30 @@ export default function Home() {
 
     // VALIDACIÓN DE SESIÓN EN EL HOME
     useEffect(() => {
-        const usuarioLogueado = localStorage.getItem("usuarioLogueado");
+        // Obtenemos el ID activo guardado en el login
+        const userIdActive = localStorage.getItem("usuarioLogueadoId");
+        const rawUserData = userIdActive
+            ? localStorage.getItem(`perfilUsuario_${userIdActive}`) || localStorage.getItem("usuarioLogueado")
+            : localStorage.getItem("usuarioLogueado");
 
-        if (usuarioLogueado) {
+        if (rawUserData) {
             try {
-                const user = JSON.parse(usuarioLogueado);
+                const user = JSON.parse(rawUserData);
 
-                // Redirigir según el rol del usuario para evitar el acceso al Home si ya hay sesión
-                if (user.rol === "admin") {
+                // Mapear según id_rol de MySQL (1: admin, 2: jugador, 3: arbitro)
+                const rol = user.id_rol || user.rol;
+
+                if (rol === 1 || rol === "admin") {
                     router.replace("/admin");
-                } else if (user.rol === "arbitro") {
+                } else if (rol === 3 || rol === "arbitro") {
                     router.replace("/arbitro/dashboard");
-                } else {
+                } else if (rol === 2 || rol === "jugador") {
                     router.replace("/dashboard");
                 }
             } catch (e) {
-                // Si el formato de localStorage está corrupto, limpiarlo
+                // Si el formato de localStorage está corrupto, limpiamos
                 localStorage.removeItem("usuarioLogueado");
+                localStorage.removeItem("usuarioLogueadoId");
             }
         }
     }, [router]);
@@ -44,9 +51,7 @@ export default function Home() {
             ) : (
                 <>
                     <NavBar />
-
                     <ContenidoPrincipal />
-
                     <Footer />
                 </>
             )}

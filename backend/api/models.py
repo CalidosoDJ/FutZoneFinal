@@ -276,6 +276,9 @@ class Usuarios(models.Model):
     foto_url = models.CharField(max_length=255, blank=True, null=True)
     estado = models.CharField(max_length=9, blank=True, null=True)
     fecha_registro = models.DateTimeField(blank=True, null=True)
+    
+    reset_token = models.CharField(max_length=255, null=True, blank=True)
+    reset_token_expires = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         managed = False

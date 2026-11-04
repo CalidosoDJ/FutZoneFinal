@@ -1,6 +1,8 @@
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
 
 from .models import Canchas, Sede, Usuarios, Reservas
 
@@ -75,6 +77,45 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+        
+        # 🟢 NUEVA ACCIÓN: RESTABLECER CONTRASEÑA EN DJANGO
+    @action(detail=False, methods=['post'], url_path='reset-password')
+    def reset_password(self, request):
+        token = request.data.get('token', '').strip()
+        new_password = request.data.get('newPassword') or request.data.get('new_password')
+
+        if not token or not new_password:
+            return Response(
+                {'message': 'El token y la nueva contraseña son obligatorios.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # 1. Buscar usuario por el token y comprobar que no haya expirado
+            usuario = Usuarios.objects.get(
+                reset_token=token)
+            
+            # Imprime en la consola de Django para verificar la hora
+            print("Token encontrado para el usuario:", usuario.email)
+            print("Hora de expiración en BD:", usuario.reset_token_expires)
+            print("Hora actual de Django:", timezone.now())     
+            
+            from django.contrib.auth.hashers import make_password
+            usuario.password_hash = make_password(new_password)
+            usuario.reset_token = None
+            usuario.reset_token_expires = None
+            usuario.save()
+            
+            return Response(
+                {'message': 'Contraseña restablecida con éxito.'},
+                status=status.HTTP_200_OK
+            )
+
+        except Usuarios.DoesNotExist:
+            return Response(
+                {'message': 'El enlace es inválido o ha expirado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class LoginViewSet(viewsets.ViewSet):

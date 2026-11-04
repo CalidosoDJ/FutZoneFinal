@@ -82,11 +82,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'futzone',
-        'USER': 'futzone_user',
-        'PASSWORD': 'futzone123',
+        'NAME': 'futzone2',
+        'USER': 'root',
+        'PASSWORD': 'r00t123',
         'HOST': 'localhost',
-        'PORT': '3307',
+        'PORT': '3306',
     }
 }
 

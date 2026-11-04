@@ -30,50 +30,35 @@ export default function RegisterForm() {
         setCargando(true);
 
         try {
-            const respuesta = await fetch(
-                "http://127.0.0.1:8000/api/usuarios/registro/",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        nombre_completo: nombre,
-                        username: usuario,
-                        email: correo,
-                        password: password,
-                        telefono: celular,
-                    }),
-                }
-            );
+            // 🚀 CORREGIDO: Apunta a tu API Route interna de Next.js (/api/auth/register)
+            const respuesta = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    nombre_completo: nombre,
+                    username: usuario,
+                    email: correo,
+                    password: password,
+                    telefono: celular,
+                }),
+            });
 
             const datos = await respuesta.json();
 
             if (!respuesta.ok) {
-                if (datos.email) {
-                    alert("Este correo ya está registrado.");
-                    return;
-                }
-
-                if (datos.username) {
-                    alert("Este nombre de usuario ya existe.");
-                    return;
-                }
-
-                alert(
-                    datos.detail ||
-                    datos.non_field_errors?.[0] ||
-                    "No se pudo registrar el usuario."
-                );
-
+                // Muestra el mensaje de error que devuelve MySQL/Next.js
+                alert(datos.message || "No se pudo registrar el usuario.");
                 return;
             }
 
-            alert("Usuario registrado correctamente");
+            alert("¡Usuario registrado correctamente! Serás redirigido al inicio de sesión.");
             router.push("/login");
+
         } catch (error) {
             console.error("Error al registrar usuario:", error);
-            alert("No se pudo conectar con el servidor Django.");
+            alert("No se pudo conectar con el servidor de Next.js.");
         } finally {
             setCargando(false);
         }

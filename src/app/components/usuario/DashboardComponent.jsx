@@ -20,26 +20,49 @@ export default function DashboardComponent() {
     const [usuario, setUsuario] = useState(null);
 
     useEffect(() => {
-        const usuarioLogueado = localStorage.getItem("usuarioLogueado");
+        // 1. Intentar leer usando el ID aislado de sesión
+        const userIdActive = localStorage.getItem("usuarioLogueadoId");
 
-        // Validar si la sesión existe
-        if (!usuarioLogueado) {
+        let datosUsuario = null;
+
+        if (userIdActive) {
+            datosUsuario = localStorage.getItem(`perfilUsuario_${userIdActive}`);
+        }
+
+        // 2. Si no existe por ID, intentar leer la clave genérica
+        if (!datosUsuario) {
+            datosUsuario = localStorage.getItem("usuarioLogueado");
+        }
+
+        // 3. Validar si existe sesión
+        if (!datosUsuario) {
             router.replace("/login");
             return;
         }
 
-        setUsuario(JSON.parse(usuarioLogueado));
+        try {
+            const userParsed = JSON.parse(datosUsuario);
+            setUsuario(userParsed);
+        } catch (e) {
+            console.error("Error al parsear el usuario:", e);
+            localStorage.removeItem("usuarioLogueado");
+            localStorage.removeItem("usuarioLogueadoId");
+            router.replace("/login");
+        }
     }, [router]);
 
-    // Si la sesión no ha cargado o no existe, prevenimos renderizar el contenido
+    // Prevenimos renderizar hasta que la sesión sea cargada
     if (!usuario) return null;
+
+    // Obtener el nombre soportando los nombres de tu tabla (nombre_completo o nombre)
+    const nombreMostrado = usuario.nombre_completo || usuario.nombre || usuario.username || "Jugador";
 
     return (
         <>
-            {/* Tarjeta principal optimizada en relleno (py-6 px-8) */}
+            {/* Tarjeta principal */}
             <section className="bg-gradient-to-br from-white via-slate-50 to-green-50 rounded-[35px] border border-slate-200 shadow-xl px-8 py-6 text-center">
                 <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-5 py-2 rounded-full font-semibold">
-                    ⚽ ¡Hola, {usuario?.nombre || "Jugador"}! Bienvenido a FutZone
+                    ⚽ ¡Hola, {nombreMostrado}! Bienvenido a FutZone
                 </span>
 
                 <h1 className="mt-4 text-4xl lg:text-5xl font-black text-gray-800 leading-tight">

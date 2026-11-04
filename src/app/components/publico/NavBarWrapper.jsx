@@ -7,7 +7,7 @@ import DashboardNavbar from "../usuario/DashboardNavBar";
 export default function NavBarWrapper() {
     const pathname = usePathname();
 
-    const rutasOcultas = ["/login", "/register", "/", "/dashboard", "/admin", "/admin/usuarios",
+    const rutasOcultas = ["/login", "/register", "/", "/dashboard", "recuperar-password", "reset-password", "/admin", "/admin/usuarios",
         "/admin/canchas", "/admin/reservas", "/admin/pagos", "/admin/torneos", "/admin/promociones",
         "/admin/reportes", "/admin/perfil", "/admin/fixture", "/admin/final", "/admin/estadisticas",
         "/admin/configuracion", "/admin/estadisticas/torneos", "/admin/estadisticas/reservas",
@@ -15,7 +15,8 @@ export default function NavBarWrapper() {
 
     if (
         rutasOcultas.includes(pathname) ||
-        pathname.startsWith("/dashboard")
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/reset-password")
     ) {
         return null;
     }
