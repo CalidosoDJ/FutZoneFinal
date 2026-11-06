@@ -15,8 +15,8 @@ export default function LoginComponent() {
     const [cargando, setCargando] = useState(false);
     const [exito, setExito] = useState(false);
     const [nombreUsuario, setNombreUsuario] = useState("");
+    const [progreso, setProgreso] = useState(0);
     const [modalAbierto, setModalAbierto] = useState(false);
-
 
     const iniciarSesion = async (e) => {
         e.preventDefault();
@@ -27,6 +27,7 @@ export default function LoginComponent() {
         }
 
         setCargando(true);
+        setProgreso(30); // Inicia la barra de carga
 
         try {
             const respuesta = await fetch(
@@ -51,6 +52,8 @@ export default function LoginComponent() {
                     datos.detail ||
                     "Correo o contraseña incorrectos"
                 );
+                setCargando(false);
+                setProgreso(0);
                 return;
             }
 
@@ -58,54 +61,45 @@ export default function LoginComponent() {
 
             if (!usuario) {
                 alert("El servidor no devolvió los datos del usuario.");
+                setCargando(false);
+                setProgreso(0);
                 return;
             }
 
-            // Normalizar el rol
-            const idRol = Number(
-                typeof usuario.id_rol === "object"
-                    ? usuario.id_rol?.id_rol ?? usuario.id_rol?.id
-                    : usuario.id_rol
-            );
+            // 🌟 Animación de Carga Completa
+            setProgreso(65);
+            setNombreUsuario(usuario.nombre_completo || usuario.username || "Usuario");
 
-            // Guardar sesión con rol normalizado
-            const usuarioSesion = {
-                ...usuario,
-                id_rol: idRol,
-            };
+            setTimeout(() => {
+                setExito(true);
+                setProgreso(100);
+            }, 400);
 
             localStorage.setItem(
                 "usuarioLogueado",
-                JSON.stringify(usuarioSesion)
+                JSON.stringify(usuario)
             );
 
-            console.log("Sesión guardada:", usuarioSesion);
+            // Redirección tras completar la barra
+            setTimeout(() => {
+                if (usuario.id_rol === 1) {
+                    router.push("/admin");
+                    return;
+                }
 
-            alert("Inicio de sesión exitoso");
+                if (usuario.id_rol === 3) {
+                    router.push("/arbitro/dashboard");
+                    return;
+                }
 
-            // REDIRECCIONES
-            if (idRol === 1) {
-                router.push("/admin");
-                return;
-            }
-
-            if (idRol === 3) {
-                router.push("/arbitro/dashboard");
-                return;
-            }
-
-            if (idRol === 2) {
                 router.push("/dashboard");
-                return;
-            }
-
-            router.push("/dashboard");
+            }, 1600);
 
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             alert("No se pudo conectar con el servidor Django.");
-        } finally {
             setCargando(false);
+            setProgreso(0);
         }
     };
 
@@ -113,7 +107,7 @@ export default function LoginComponent() {
         <section className="min-h-screen flex bg-black overflow-hidden">
             <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-12 py-8 relative">
 
-                {/* 🌟 TARJETA DE BIENVENIDA PREMIUM AL INICIAR SESIÓN */}
+                {/* 🌟 TARJETA CON BARRA DE CARGA PROGRESIVA */}
                 {cargando ? (
                     <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-3xl p-8 flex flex-col items-center text-center shadow-xl transition-all animate-in fade-in zoom-in-95 duration-300">
                         <div className="relative mb-6 flex items-center justify-center">
@@ -132,12 +126,16 @@ export default function LoginComponent() {
                             {!exito ? "Verificando..." : `¡Hola de nuevo!`}
                         </h2>
 
-                        <p className="text-green-600 font-semibold text-xl mb-4">
+                        <p className="text-green-600 font-semibold text-xl mb-6">
                             {exito ? nombreUsuario : "Validando credenciales"}
                         </p>
 
-                        <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                            <div className={`h-full bg-green-600 transition-all duration-1000 ${exito ? "w-full" : "w-2/3 animate-pulse"}`}></div>
+                        {/* BARRA DE PROGRESO */}
+                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden shadow-inner">
+                            <div
+                                className="h-full bg-green-600 transition-all duration-500 ease-out rounded-full"
+                                style={{ width: `${progreso}%` }}
+                            ></div>
                         </div>
 
                         <p className="text-gray-400 text-xs mt-4">
@@ -145,12 +143,11 @@ export default function LoginComponent() {
                         </p>
                     </div>
                 ) : (
-                    /* FORMULARIO DE LOGIN STANDARD */
+                    /* FORMULARIO DE LOGIN */
                     <form
                         onSubmit={iniciarSesion}
                         className="w-full max-w-lg transition-all"
                     >
-                        {/* Botón de volver al inicio e Identidad de Marca */}
                         <div className="mb-2">
                             <Link
                                 href="/"
@@ -260,7 +257,7 @@ export default function LoginComponent() {
                 )}
             </div>
 
-            {/* COLUMNA DERECHA CON IMAGEN */}
+            {/* COLUMNA DERECHA */}
             <div
                 className="hidden lg:flex lg:w-[60%] bg-cover bg-center relative"
                 style={{

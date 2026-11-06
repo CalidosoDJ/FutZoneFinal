@@ -318,7 +318,7 @@ export default function ReservasComponent() {
     <div className="space-y-6 text-gray-800">
       <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Reservas</h1>
+          <h1 className="text-4xl font-bold text-gray-800">Gestión de Reservas</h1>
           <p className="mt-1 text-sm text-gray-500">
             Administra las reservas registradas en FutZone.
           </p>
