@@ -17,6 +17,7 @@ export default function LoginComponent() {
     const [nombreUsuario, setNombreUsuario] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
 
+
     const iniciarSesion = async (e) => {
         e.preventDefault();
 
@@ -29,7 +30,7 @@ export default function LoginComponent() {
 
         try {
             const respuesta = await fetch(
-                "/api/auth/login",
+                "http://127.0.0.1:8000/api/login/",
                 {
                     method: "POST",
                     headers: {
@@ -50,45 +51,60 @@ export default function LoginComponent() {
                     datos.detail ||
                     "Correo o contraseña incorrectos"
                 );
-                setCargando(false);
                 return;
             }
 
-            const usuario = datos.usuario || datos.user;
+            const usuario = datos.usuario;
 
             if (!usuario) {
                 alert("El servidor no devolvió los datos del usuario.");
-                setCargando(false);
                 return;
             }
 
-            // 🌟 Activar Estado de Éxito Premium
-            setNombreUsuario(usuario.nombre_completo || usuario.username || "Usuario");
-            setExito(true);
+            // Normalizar el rol
+            const idRol = Number(
+                typeof usuario.id_rol === "object"
+                    ? usuario.id_rol?.id_rol ?? usuario.id_rol?.id
+                    : usuario.id_rol
+            );
+
+            // Guardar sesión con rol normalizado
+            const usuarioSesion = {
+                ...usuario,
+                id_rol: idRol,
+            };
 
             localStorage.setItem(
                 "usuarioLogueado",
-                JSON.stringify(usuario)
+                JSON.stringify(usuarioSesion)
             );
 
-            // Redirección con un pequeño delay para apreciar la animación
-            setTimeout(() => {
-                if (usuario.id_rol === 1) {
-                    router.push("/admin");
-                    return;
-                }
+            console.log("Sesión guardada:", usuarioSesion);
 
-                if (usuario.id_rol === 3) {
-                    router.push("/arbitro/dashboard");
-                    return;
-                }
+            alert("Inicio de sesión exitoso");
 
+            // REDIRECCIONES
+            if (idRol === 1) {
+                router.push("/admin");
+                return;
+            }
+
+            if (idRol === 3) {
+                router.push("/arbitro/dashboard");
+                return;
+            }
+
+            if (idRol === 2) {
                 router.push("/dashboard");
-            }, 1600);
+                return;
+            }
+
+            router.push("/dashboard");
 
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             alert("No se pudo conectar con el servidor Django.");
+        } finally {
             setCargando(false);
         }
     };

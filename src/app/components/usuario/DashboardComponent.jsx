@@ -13,6 +13,10 @@ import {
     Users,
     MessageCircleQuestion,
     Handshake,
+    Megaphone,
+    Newspaper,
+    Tag,
+    ChevronRight,
 } from "lucide-react";
 
 export default function DashboardComponent() {
@@ -50,6 +54,33 @@ export default function DashboardComponent() {
             router.replace("/login");
         }
     }, [router]);
+    const [publicaciones, setPublicaciones] = useState([]);
+    const [cargandoPublicaciones, setCargandoPublicaciones] = useState(true);
+    const [errorPublicaciones, setErrorPublicaciones] = useState(false);
+
+    useEffect(() => {
+        const cargarPublicaciones = async () => {
+            try {
+                const respuesta = await fetch(
+                    "http://127.0.0.1:8000/api/publicaciones/?publicadas=true"
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error("No se pudieron cargar las publicaciones");
+                }
+
+                const datos = await respuesta.json();
+                setPublicaciones(datos);
+            } catch (error) {
+                console.error("Error cargando publicaciones:", error);
+                setErrorPublicaciones(true);
+            } finally {
+                setCargandoPublicaciones(false);
+            }
+        };
+
+        cargarPublicaciones();
+    }, []);
 
     // Prevenimos renderizar hasta que la sesión sea cargada
     if (!usuario) return null;
@@ -139,6 +170,169 @@ export default function DashboardComponent() {
                     </p>
                 </div>
             </section>
+
+
+            {/* NOTICIAS Y PROMOCIONES */}
+            <section className="mt-14">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-7">
+                    <div>
+                        <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold">
+                            <Megaphone size={17} />
+                            NOVEDADES FUTZONE
+                        </span>
+
+                        <h2 className="text-3xl lg:text-4xl font-black text-gray-800 mt-4">
+                            Noticias y promociones
+                        </h2>
+
+                        <p className="text-gray-500 mt-2 text-lg">
+                            Entérate de las últimas novedades y aprovecha las ofertas.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-green-700 font-semibold">
+                        <Newspaper size={20} />
+                        <span>Información oficial</span>
+                    </div>
+                </div>
+
+                {cargandoPublicaciones && (
+                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {[1, 2, 3].map((item) => (
+                            <div
+                                key={item}
+                                className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-pulse"
+                            >
+                                <div className="h-52 bg-gray-200" />
+                                <div className="p-6 space-y-3">
+                                    <div className="h-4 bg-gray-200 rounded w-1/3" />
+                                    <div className="h-6 bg-gray-200 rounded w-3/4" />
+                                    <div className="h-4 bg-gray-200 rounded w-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {!cargandoPublicaciones && errorPublicaciones && (
+                    <div className="bg-white border border-red-100 rounded-2xl p-8 text-center">
+                        <p className="text-gray-700 font-semibold">
+                            No pudimos cargar las publicaciones.
+                        </p>
+                        <p className="text-gray-500 mt-2">
+                            Intenta actualizar la página en unos momentos.
+                        </p>
+                    </div>
+                )}
+
+                {!cargandoPublicaciones &&
+                    !errorPublicaciones &&
+                    publicaciones.length === 0 && (
+                        <div className="bg-white border border-dashed border-gray-300 rounded-3xl p-10 text-center">
+                            <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto">
+                                <Megaphone size={30} className="text-green-600" />
+                            </div>
+
+                            <h3 className="text-xl font-bold text-gray-800 mt-5">
+                                Próximamente, nuevas publicaciones
+                            </h3>
+
+                            <p className="text-gray-500 mt-2 max-w-lg mx-auto">
+                                Aquí encontrarás noticias, promociones y novedades de FutZone.
+                            </p>
+                        </div>
+                    )}
+
+                {!cargandoPublicaciones &&
+                    !errorPublicaciones &&
+                    publicaciones.length > 0 && (
+                        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {publicaciones.slice(0, 6).map((publicacion) => {
+                                const imagen = publicacion.imagen_url
+                                    ? publicacion.imagen_url.startsWith("http")
+                                        ? publicacion.imagen_url
+                                        : `http://127.0.0.1:8000/media/${publicacion.imagen_url.replace(/^\/?media\//, "")}`
+                                    : null;
+
+                                return (
+                                    <article
+                                        key={publicacion.id_publicacion}
+                                        className="group bg-white rounded-3xl border border-gray-100 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                                    >
+                                        <div className="relative h-52 bg-gradient-to-br from-green-800 to-emerald-500 overflow-hidden">
+                                            {imagen ? (
+                                                <img
+                                                    src={imagen}
+                                                    alt={publicacion.titulo}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                                                    {publicacion.tipo === "Noticia" ? (
+                                                        <Newspaper size={46} />
+                                                    ) : (
+                                                        <Megaphone size={46} />
+                                                    )}
+                                                    <span className="font-bold mt-3 text-lg">
+                                                        FUTZONE
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="absolute top-4 left-4">
+                                                <span
+                                                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold shadow ${publicacion.tipo === "Promoción"
+                                                            ? "bg-amber-100 text-amber-800"
+                                                            : "bg-blue-100 text-blue-800"
+                                                        }`}
+                                                >
+                                                    <Tag size={13} />
+                                                    {publicacion.tipo}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6">
+                                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                                                <CalendarDays size={16} />
+                                                <span>
+                                                    {publicacion.fecha_publicacion
+                                                        ? new Date(
+                                                            `${publicacion.fecha_publicacion}T12:00:00`
+                                                        ).toLocaleDateString("es-CO", {
+                                                            day: "numeric",
+                                                            month: "long",
+                                                            year: "numeric",
+                                                        })
+                                                        : "Fecha no disponible"}
+                                                </span>
+                                            </div>
+
+                                            <h3 className="text-xl font-black text-gray-800 leading-snug line-clamp-2">
+                                                {publicacion.titulo}
+                                            </h3>
+
+                                            <p className="text-gray-600 mt-3 leading-7 line-clamp-3 whitespace-pre-line">
+                                                {publicacion.descripcion}
+                                            </p>
+
+                                            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-green-700">
+                                                    PUBLICADO POR FUTZONE
+                                                </span>
+
+                                                <span className="text-green-600">
+                                                    <ChevronRight size={22} />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    )}
+            </section>
+
 
             {/* AYUDA Y MÁS INFORMACIÓN */}
             <section className="mt-12">

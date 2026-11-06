@@ -6,6 +6,7 @@ import { FaPlus, FaSearch, FaEdit, FaTrash } from "react-icons/fa";
 import CanchaModal from "./CanchaModal";
 
 const API = "http://127.0.0.1:8000/api/canchas/";
+const MEDIA_BASE = "http://127.0.0.1:8000";
 
 export default function CanchasComponent() {
     const [canchas, setCanchas] = useState([]);
@@ -22,6 +23,7 @@ export default function CanchasComponent() {
         precio: "",
         estado: "Disponible",
         imagen: "",
+        imagenArchivo: null,
     });
 
     // CONSULTAR CANCHAS EN DJANGO
@@ -45,7 +47,15 @@ export default function CanchasComponent() {
                     : `Tipo ${cancha.id_tipo}`,
                 precio: Number(cancha.precio_hora),
                 estado: cancha.estado || "Disponible",
-                imagen: "",
+
+                // Conservar la imagen que devuelve Django
+
+                imagen: cancha.imagen_url
+                    ? cancha.imagen_url.startsWith("http")
+                        ? cancha.imagen_url
+                        : `${MEDIA_BASE}/media/${cancha.imagen_url.replace(/^\/?media\//, "").split("/").map(encodeURIComponent).join("/")}`
+                    : "",
+
                 id_sede: Number(cancha.id_sede),
                 id_tipo: Number(cancha.id_tipo),
             })));
@@ -85,25 +95,26 @@ export default function CanchasComponent() {
                 return;
             }
 
-            const datos = {
-                nombre: formulario.nombre.trim(),
-                precio_hora: Number(formulario.precio),
-                estado: formulario.estado,
-                id_sede: 1,
-                id_tipo: 1,
-            };
+            const datos = new FormData();
+
+            datos.append("nombre", formulario.nombre.trim());
+            datos.append("precio_hora", String(Number(formulario.precio)));
+            datos.append("estado", formulario.estado);
+            datos.append("id_sede", "1");
+            datos.append("id_tipo", "1");
+
+            if (formulario.imagenArchivo) {
+                datos.append("imagen", formulario.imagenArchivo);
+            }
 
             const respuesta = await fetch(API, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(datos),
+                body: datos,
             });
 
             if (!respuesta.ok) {
-                const detalle = await respuesta.json();
-                throw new Error(JSON.stringify(detalle));
+                const detalle = await respuesta.text();
+                throw new Error(detalle);
             }
 
             await cargarCanchas();
@@ -138,25 +149,26 @@ export default function CanchasComponent() {
                 return;
             }
 
-            const datos = {
-                nombre: formulario.nombre.trim(),
-                precio_hora: Number(formulario.precio),
-                estado: formulario.estado,
-                id_sede: 1,
-                id_tipo: 1,
-            };
+            const datos = new FormData();
+
+            datos.append("nombre", formulario.nombre.trim());
+            datos.append("precio_hora", String(Number(formulario.precio)));
+            datos.append("estado", formulario.estado);
+            datos.append("id_sede", "1");
+            datos.append("id_tipo", "1");
+
+            if (formulario.imagenArchivo) {
+                datos.append("imagen", formulario.imagenArchivo);
+            }
 
             const respuesta = await fetch(`${API}${indice}/`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(datos),
+                body: datos,
             });
 
             if (!respuesta.ok) {
-                const detalle = await respuesta.json();
-                throw new Error(JSON.stringify(detalle));
+                const detalle = await respuesta.text();
+                throw new Error(detalle);
             }
 
             await cargarCanchas();
@@ -165,7 +177,6 @@ export default function CanchasComponent() {
             setError("Error al actualizar la cancha: " + err.message);
         }
     };
-
     // ELIMINAR CANCHA
     const eliminarCancha = async (id) => {
         if (!confirm("¿Eliminar esta cancha de la base de datos?")) {
@@ -277,14 +288,18 @@ export default function CanchasComponent() {
                                         className="border-b hover:bg-gray-50"
                                     >
                                         <td className="p-4">
+
                                             <img
-                                                src={
-                                                    cancha.imagen ||
-                                                    "/images/cancha-default.jpg"
-                                                }
+                                                src={cancha.imagen || "/images/cancha-default.jpg"}
                                                 alt={cancha.nombre}
+                                                onError={(e) => {
+                                                    console.error("No se pudo cargar la imagen:", e.currentTarget.src);
+                                                    e.currentTarget.onerror = null;
+                                                    e.currentTarget.src = "/images/cancha1.jpg";
+                                                }}
                                                 className="w-20 h-14 rounded-lg object-cover"
                                             />
+
                                         </td>
 
                                         <td className="pr-3">{cancha.nombre}</td>
@@ -295,13 +310,12 @@ export default function CanchasComponent() {
                                         </td>
 
                                         <td className="pr-3">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                                cancha.estado === "Disponible"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : cancha.estado === "Ocupada"
-                                                        ? "bg-red-100 text-red-700"
-                                                        : "bg-yellow-100 text-yellow-700"
-                                            }`}>
+                                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${cancha.estado === "Disponible"
+                                                ? "bg-green-100 text-green-700"
+                                                : cancha.estado === "Ocupada"
+                                                    ? "bg-red-100 text-red-700"
+                                                    : "bg-yellow-100 text-yellow-700"
+                                                }`}>
                                                 {cancha.estado}
                                             </span>
                                         </td>

@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import {
     FaFutbol,
@@ -10,6 +11,15 @@ import {
     FaMoneyBillWave,
     FaBullhorn,
     FaFilePdf,
+    FaBuilding,
+    FaCreditCard,
+    FaNewspaper,
+    FaSyncAlt,
+    FaChartLine,
+    FaCheckCircle,
+    FaTimesCircle,
+    FaClock,
+    FaExclamationTriangle,
 } from "react-icons/fa";
 
 import {
@@ -20,1054 +30,1129 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
 } from "recharts";
 
+// --------------------------------------------------
+// CONFIGURACIÓN
+// --------------------------------------------------
+
+const API_URL = (
+    process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+).replace(/\/$/, "");
+
+const ENDPOINTS = {
+    reservas: "/api/reservas/",
+    pagos: "/api/pagos/",
+    canchas: "/api/canchas/",
+    sedes: "/api/sedes/",
+    usuarios: "/api/usuarios/",
+    publicaciones: "/api/publicaciones/",
+    torneos: "/api/torneos/",
+    promociones: "/api/promociones/",
+};
+
+const COLORES = {
+    verde: "#16a34a",
+    azul: "#2563eb",
+    amarillo: "#eab308",
+    rojo: "#dc2626",
+    morado: "#9333ea",
+    naranja: "#ea580c",
+    gris: "#64748b",
+};
+
+const FORMATO_PESO = new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+});
+
+// --------------------------------------------------
+// FUNCIONES AUXILIARES
+// --------------------------------------------------
+
+function obtenerLista(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.results)) return data.results;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+}
+
+function obtenerEstado(item) {
+    return String(item?.estado || item?.status || "")
+        .trim()
+        .toLowerCase();
+}
+
+function obtenerValor(item) {
+    return Number(
+        item?.total ??
+        item?.valor ??
+        item?.precio ??
+        item?.monto ??
+        item?.valor_total ??
+        0
+    ) || 0;
+}
+
+function obtenerFecha(item) {
+    return (
+        item?.fecha_reserva ||
+        item?.fecha ||
+        item?.fecha_inicio ||
+        item?.created_at ||
+        item?.fecha_creacion ||
+        ""
+    );
+}
+
+function obtenerNombreCancha(item) {
+    const cancha = item?.id_cancha;
+
+    if (typeof cancha === "object" && cancha !== null) {
+        return (
+            cancha.nombre ||
+            cancha.nombre_cancha ||
+            cancha.nombre_comercial ||
+            "Cancha sin nombre"
+        );
+    }
+
+    return (
+        item?.cancha ||
+        item?.nombreCancha ||
+        item?.nombre_cancha ||
+        "Cancha sin nombre"
+    );
+}
+
+function obtenerNombreUsuario(item) {
+    const usuario = item?.id_usuario;
+
+    if (typeof usuario === "object" && usuario !== null) {
+        return (
+            usuario.nombre_completo ||
+            usuario.username ||
+            usuario.nombre ||
+            "Usuario"
+        );
+    }
+
+    return (
+        item?.usuario ||
+        item?.nombreUsuario ||
+        item?.nombre_usuario ||
+        "Usuario"
+    );
+}
+
+function obtenerHora(item) {
+    return (
+        item?.hora_inicio ||
+        item?.hora ||
+        item?.hora_reserva ||
+        "-"
+    );
+}
+
+function esEstado(item, estado) {
+    return obtenerEstado(item) === estado.toLowerCase();
+}
+
+function formatearFecha(fecha) {
+    if (!fecha) return "-";
+
+    const valor = new Date(fecha);
+
+    if (Number.isNaN(valor.getTime())) return String(fecha);
+
+    return valor.toLocaleDateString("es-CO");
+}
+
+function nombreMes(fecha) {
+    const valor = new Date(fecha);
+
+    if (Number.isNaN(valor.getTime())) return "Sin fecha";
+
+    return valor.toLocaleDateString("es-CO", {
+        month: "short",
+        year: "2-digit",
+    });
+}
+
+// --------------------------------------------------
+// COMPONENTE PRINCIPAL
+// --------------------------------------------------
+
 export default function ReportesComponent() {
+    const [datos, setDatos] = useState({
+        reservas: [],
+        pagos: [],
+        canchas: [],
+        sedes: [],
+        usuarios: [],
+        publicaciones: [],
+        torneos: [],
+        promociones: [],
+    });
 
-    const [torneos, setTorneos] = useState([]);
-    const [promociones, setPromociones] = useState([]);
-    const [reservas, setReservas] = useState([]);
+    const [errores, setErrores] = useState({});
+    const [cargando, setCargando] = useState(true);
+    const [actualizado, setActualizado] = useState(null);
 
-    const reservasPendientes = reservas.filter(
-        (r) => r.estado === "Pendiente"
-    ).length;
+    // --------------------------------------------------
+    // CONSUMO DEL BACKEND
+    // --------------------------------------------------
 
-    const reservasConfirmadas = reservas.filter(
-        (r) => r.estado === "Confirmada"
-    ).length;
+    const cargarReportes = useCallback(async () => {
+        setCargando(true);
 
-    const reservasCanceladas = reservas.filter(
-        (r) => r.estado === "Cancelada"
-    ).length;
+        const resultados = {};
+        const nuevosErrores = {};
 
-    useEffect(() => {
+        const peticiones = Object.entries(ENDPOINTS).map(
+            async ([nombre, endpoint]) => {
+                try {
+                    const respuesta = await fetch(
+                        `${API_URL}${endpoint}`,
+                        {
+                            method: "GET",
+                            headers: {
+                                Accept: "application/json",
+                            },
+                            cache: "no-store",
+                        }
+                    );
 
-        const datosTorneos =
-            JSON.parse(localStorage.getItem("torneos")) || [];
+                    if (!respuesta.ok) {
+                        throw new Error(
+                            `Error ${respuesta.status}`
+                        );
+                    }
 
-        const datosPromociones =
-            JSON.parse(localStorage.getItem("promociones")) || [];
+                    const contenido = await respuesta.json();
 
-        const datosReservas =
-            JSON.parse(localStorage.getItem("reservas")) || [];
+                    resultados[nombre] = obtenerLista(contenido);
+                } catch (error) {
+                    resultados[nombre] = [];
+                    nuevosErrores[nombre] = error.message;
+                }
+            }
+        );
 
-        setTorneos(datosTorneos);
-        setPromociones(datosPromociones);
-        setReservas(datosReservas);
+        await Promise.all(peticiones);
 
+        setDatos({
+            reservas: resultados.reservas || [],
+            pagos: resultados.pagos || [],
+            canchas: resultados.canchas || [],
+            sedes: resultados.sedes || [],
+            usuarios: resultados.usuarios || [],
+            publicaciones: resultados.publicaciones || [],
+            torneos: resultados.torneos || [],
+            promociones: resultados.promociones || [],
+        });
+
+        setErrores(nuevosErrores);
+        setActualizado(new Date());
+        setCargando(false);
     }, []);
 
-    // Estadisticas
+    useEffect(() => {
+        cargarReportes();
+    }, [cargarReportes]);
 
-    const totalTorneos = torneos.length;
+    // --------------------------------------------------
+    // DATOS
+    // --------------------------------------------------
+
+    const {
+        reservas,
+        pagos,
+        canchas,
+        sedes,
+        usuarios,
+        publicaciones,
+        torneos,
+        promociones,
+    } = datos;
+
+    const reservasConfirmadas = useMemo(
+        () => reservas.filter((r) =>
+            esEstado(r, "Confirmada")
+        ),
+        [reservas]
+    );
+
+    const reservasPendientes = useMemo(
+        () => reservas.filter((r) =>
+            esEstado(r, "Pendiente")
+        ),
+        [reservas]
+    );
+
+    const reservasCanceladas = useMemo(
+        () => reservas.filter((r) =>
+            esEstado(r, "Cancelada")
+        ),
+        [reservas]
+    );
 
     const torneosActivos = torneos.filter(
-        (t) => t.estado === "Activo"
+        (t) => esEstado(t, "Activo")
     ).length;
 
     const totalEquipos = torneos.reduce(
         (total, torneo) =>
-            total + (Array.isArray(torneo.equipos)
+            total +
+            (Array.isArray(torneo.equipos)
                 ? torneo.equipos.length
-                : 0),
+                : Number(torneo.total_equipos || 0)),
+        0
+    );
+
+    // Ingresos estimados a partir de reservas confirmadas.
+    // No equivale necesariamente a pagos efectivamente recibidos.
+
+    const ingresosConfirmados = reservasConfirmadas.reduce(
+        (total, reserva) => total + obtenerValor(reserva),
         0
     );
 
     const totalReservas = reservas.length;
-    const totalPromociones = promociones.length;
+
+    const tasaConfirmacion = totalReservas
+        ? Math.round(
+            (reservasConfirmadas.length / totalReservas) * 100
+        )
+        : 0;
+
+    const tasaCancelacion = totalReservas
+        ? Math.round(
+            (reservasCanceladas.length / totalReservas) * 100
+        )
+        : 0;
+
+    // --------------------------------------------------
+    // GRÁFICAS
+    // --------------------------------------------------
+
+    const datosEstados = [
+        {
+            estado: "Confirmadas",
+            cantidad: reservasConfirmadas.length,
+            color: COLORES.verde,
+        },
+        {
+            estado: "Pendientes",
+            cantidad: reservasPendientes.length,
+            color: COLORES.amarillo,
+        },
+        {
+            estado: "Canceladas",
+            cantidad: reservasCanceladas.length,
+            color: COLORES.rojo,
+        },
+    ];
 
     const datosTorneos = [
         {
             estado: "Activos",
             cantidad: torneos.filter(
-                (t) => t.estado === "Activo"
+                (t) => esEstado(t, "Activo")
             ).length,
         },
         {
             estado: "En curso",
             cantidad: torneos.filter(
-                (t) => t.estado === "En curso"
+                (t) => esEstado(t, "En curso")
             ).length,
         },
         {
             estado: "Finalizados",
             cantidad: torneos.filter(
-                (t) => t.estado === "Finalizado"
+                (t) => esEstado(t, "Finalizado")
             ).length,
         },
     ];
 
-    const ingresosPorMes = {};
+    const datosIngresos = useMemo(() => {
+        const agrupados = {};
 
-    reservas.forEach((reserva) => {
+        reservasConfirmadas.forEach((reserva) => {
+            const fecha = obtenerFecha(reserva);
 
-        if (reserva.estado !== "Confirmada") return;
+            if (!fecha) return;
 
-        if (!reserva.fecha) return;
+            const mes = nombreMes(fecha);
 
-        const fecha = new Date(reserva.fecha);
-
-        const mes = fecha.toLocaleDateString("es-CO", {
-            month: "long",
+            agrupados[mes] =
+                (agrupados[mes] || 0) + obtenerValor(reserva);
         });
 
-        const mesCapitalizado =
-            mes.charAt(0).toUpperCase() + mes.slice(1);
-
-        const valor = Number(
-            reserva.total ||
-            reserva.valor ||
-            reserva.precio ||
-            0
+        return Object.entries(agrupados).map(
+            ([mes, ingresos]) => ({
+                mes,
+                ingresos,
+            })
         );
+    }, [reservasConfirmadas]);
 
-        ingresosPorMes[mesCapitalizado] =
-            (ingresosPorMes[mesCapitalizado] || 0) + valor;
-    });
+    const datosCanchas = useMemo(() => {
+        const agrupados = {};
 
-    const reservasPorCancha = {};
+        reservas.forEach((reserva) => {
+            const nombre = obtenerNombreCancha(reserva);
 
-    reservas.forEach((reserva) => {
+            agrupados[nombre] =
+                (agrupados[nombre] || 0) + 1;
+        });
 
-        const nombreCancha =
-            reserva.cancha ||
-            reserva.nombreCancha ||
-            "Sin cancha";
+        return Object.entries(agrupados)
+            .map(([cancha, cantidad]) => ({
+                cancha,
+                cantidad,
+            }))
+            .sort((a, b) => b.cantidad - a.cantidad)
+            .slice(0, 8);
+    }, [reservas]);
 
-        reservasPorCancha[nombreCancha] =
-            (reservasPorCancha[nombreCancha] || 0) + 1;
-
-    });
-
-    const totalReservasIndicador = reservas.length;
-
-    const reservasConfirmadasIndicador = reservas.filter(
-        (r) => r.estado === "Confirmada"
-    ).length;
-
-    const reservasCanceladasIndicador = reservas.filter(
-        (r) => r.estado === "Cancelada"
-    ).length;
-
-    const tasaConfirmacion =
-        totalReservasIndicador > 0
-            ? Math.round(
-                (reservasConfirmadasIndicador /
-                    totalReservasIndicador) *
-                100
-            )
-            : 0;
-
-    const tasaCancelacion =
-        totalReservasIndicador > 0
-            ? Math.round(
-                (reservasCanceladasIndicador /
-                    totalReservasIndicador) *
-                100
-            )
-            : 0;
-
-    const datosCanchas = Object.entries(reservasPorCancha)
-        .map(([cancha, cantidad]) => ({
-            cancha,
-            cantidad,
-        }))
-        .sort((a, b) => b.cantidad - a.cantidad);
-
-    const datosIngresos = Object.entries(ingresosPorMes).map(
-        ([mes, ingresos]) => ({
-            mes,
-            ingresos,
-        })
-    );
-
-    const totalIngresos = reservas.reduce(
-        (total, reserva) =>
-            total + Number(reserva.valor || reserva.precio || 0),
-        0
-    );
+    // --------------------------------------------------
+    // PDF
+    // --------------------------------------------------
 
     const generarPDF = () => {
-
         const doc = new jsPDF();
 
-        const fechaActual = new Date().toLocaleDateString("es-CO");
+        const fecha = new Date().toLocaleString("es-CO");
 
-        // TÍTULO
+        doc.setFillColor(22, 163, 74);
+        doc.rect(0, 0, 210, 35, "F");
 
-        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text("Reporte General - FutZone", 20, 20);
+        doc.text("FUTZONE", 20, 17);
 
-        // FECHA
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text("Reporte general administrativo", 20, 26);
 
+        doc.setTextColor(40, 40, 40);
         doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Fecha del reporte: ${fechaActual}`, 20, 28);
+        doc.text(`Generado: ${fecha}`, 20, 45);
 
-        // LÍNEA
+        let y = 60;
 
-        doc.line(20, 33, 190, 33);
+        const seccion = (titulo) => {
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(titulo, 20, y);
+            y += 10;
+        };
 
-        // RESUMEN
-
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("Resumen General", 20, 45);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Total de torneos: ${totalTorneos}`, 20, 55);
-        doc.text(`Torneos activos: ${torneosActivos}`, 20, 63);
-        doc.text(`Equipos inscritos: ${totalEquipos}`, 20, 71);
-        doc.text(`Total de reservas: ${totalReservas}`, 20, 79);
-        doc.text(
-            `Ingresos: $${Number(totalIngresos).toLocaleString("es-CO")}`,
-            20,
-            87
-        );
-
-        doc.text(
-            `Promociones: ${totalPromociones}`,
-            20,
-            95
-        );
-
-        // RESERVAS
-
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("Estado de las Reservas", 20, 110);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(
-            `Confirmadas: ${reservasConfirmadasIndicador}`,
-            20,
-            120
-        );
-
-        doc.text(
-            `Pendientes: ${reservasPendientes}`,
-            20,
-            128
-        );
-
-        doc.text(
-            `Canceladas: ${reservasCanceladasIndicador}`,
-            20,
-            136
-        );
-
-        // INDICADORES
-
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("Indicadores", 20, 151);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(
-            `Tasa de confirmación: ${tasaConfirmacion}%`,
-            20,
-            161
-        );
-
-        doc.text(
-            `Tasa de cancelación: ${tasaCancelacion}%`,
-            20,
-            169
-        );
-
-        // TORNEOS
-
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("Torneos registrados", 20, 184);
-
-        let posicionY = 194;
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-
-        torneos.forEach((torneo) => {
-
-            doc.text(
-                `${torneo.nombre} - ${torneo.estado}`,
-                20,
-                posicionY
-            );
-
-            posicionY += 7;
-
-            // Si la página se llena
-
-            if (posicionY > 275) {
-
+        const linea = (texto) => {
+            if (y > 275) {
                 doc.addPage();
-
-                posicionY = 20;
-
+                y = 20;
             }
 
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(String(texto), 22, y);
+            y += 7;
+        };
+
+        seccion("Resumen general");
+
+        linea(`Total de reservas: ${totalReservas}`);
+        linea(`Reservas confirmadas: ${reservasConfirmadas.length}`);
+        linea(`Reservas pendientes: ${reservasPendientes.length}`);
+        linea(`Reservas canceladas: ${reservasCanceladas.length}`);
+        linea(`Canchas registradas: ${canchas.length}`);
+        linea(`Sedes registradas: ${sedes.length}`);
+        linea(`Usuarios registrados: ${usuarios.length}`);
+        linea(`Pagos registrados: ${pagos.length}`);
+        linea(`Torneos registrados: ${torneos.length}`);
+        linea(`Promociones registradas: ${promociones.length}`);
+        linea(`Publicaciones registradas: ${publicaciones.length}`);
+
+        y += 5;
+        seccion("Indicadores");
+
+        linea(`Tasa de confirmacion: ${tasaConfirmacion}%`);
+        linea(`Tasa de cancelacion: ${tasaCancelacion}%`);
+        linea(
+            `Valor de reservas confirmadas: ${FORMATO_PESO.format(
+                ingresosConfirmados
+            )}`
+        );
+
+        y += 5;
+        seccion("Reservas");
+
+        reservas.forEach((r) => {
+            linea(
+                `${obtenerNombreUsuario(r)} | ${obtenerNombreCancha(r)} | ${formatearFecha(obtenerFecha(r))} | ${obtenerEstado(r)} | ${FORMATO_PESO.format(obtenerValor(r))}`
+            );
         });
 
-        // GUARDAR
+        y += 5;
+        seccion("Torneos");
 
-        doc.save("Reporte-FutZone.pdf");
+        torneos.forEach((t) => {
+            linea(`${t.nombre || "Torneo"} - ${t.estado || "Sin estado"}`);
+        });
 
+        doc.save("Reporte-General-FutZone.pdf");
     };
 
-    return (
+    // --------------------------------------------------
+    // COMPONENTES VISUALES
+    // --------------------------------------------------
 
-        <div>
+    const Tarjeta = ({
+        titulo,
+        valor,
+        descripcion,
+        icono: Icono,
+        color,
+    }) => (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-sm font-medium text-gray-500">
+                        {titulo}
+                    </p>
 
-            {/* TÍTULO */}
+                    <h3 className="text-3xl font-bold text-slate-800 mt-2">
+                        {valor}
+                    </h3>
 
-            <div className="mb-8">
+                    <p className="text-xs text-gray-400 mt-2">
+                        {descripcion}
+                    </p>
+                </div>
 
-                <h1 className="text-4xl font-bold text-gray-800">
-                    Reportes
-                </h1>
-
-                <p className="text-gray-500 mt-1">
-                    Resumen general de FutZone
-                </p>
-
-                <button
-                    onClick={generarPDF}
-                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-md"
+                <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{
+                        backgroundColor: `${color}18`,
+                        color,
+                    }}
                 >
-                    <FaFilePdf />
-                    Generar PDF
-                </button>
-
+                    <Icono size={23} />
+                </div>
             </div>
+        </div>
+    );
 
+    const TituloSeccion = ({ titulo, descripcion }) => (
+        <div className="mb-5">
+            <h2 className="text-xl font-bold text-slate-800">
+                {titulo}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+                {descripcion}
+            </p>
+        </div>
+    );
 
-            {/* TARJETAS */}
+    const Estado = ({ estado }) => {
+        const valor = String(estado || "Sin estado").toLowerCase();
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        const estilos = {
+            confirmada: "bg-green-100 text-green-700",
+            confirmado: "bg-green-100 text-green-700",
+            pendiente: "bg-yellow-100 text-yellow-700",
+            cancelada: "bg-red-100 text-red-700",
+            cancelado: "bg-red-100 text-red-700",
+            activo: "bg-green-100 text-green-700",
+            finalizado: "bg-gray-100 text-gray-700",
+            "en curso": "bg-blue-100 text-blue-700",
+        };
 
-                {/* TORNEOS */}
+        return (
+            <span
+                className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                    estilos[valor] || "bg-slate-100 text-slate-600"
+                }`}
+            >
+                {estado || "Sin estado"}
+            </span>
+        );
+    };
 
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-purple-600">
+    // --------------------------------------------------
+    // INTERFAZ
+    // --------------------------------------------------
 
-                    <div className="flex justify-between items-center">
+    return (
+        <div className="min-h-screen bg-slate-50 p-4 md:p-7 text-slate-800">
 
-                        <div>
+            {/* ENCABEZADO */}
 
-                            <p className="text-gray-500">
-                                Total Torneos
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                {totalTorneos}
-                            </h2>
-
-                            <p className="text-sm text-green-600 mt-2">
-                                {torneosActivos} activos
-                            </p>
-
-                        </div>
-
-                        <FaTrophy className="text-purple-600 text-4xl" />
-
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+                <div>
+                    <div className="flex items-center gap-2 text-green-700 text-sm font-semibold mb-2">
+                        <FaChartLine />
+                        CENTRO DE INTELIGENCIA FUTZONE
                     </div>
 
-                </div>
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+                        Reportes generales
+                    </h1>
 
-
-                {/* EQUIPOS */}
-
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-blue-600">
-
-                    <div className="flex justify-between items-center">
-
-                        <div>
-
-                            <p className="text-gray-500">
-                                Equipos inscritos
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                {totalEquipos}
-                            </h2>
-
-                        </div>
-
-                        <FaUsers className="text-blue-600 text-4xl" />
-
-                    </div>
-
-                </div>
-
-
-                {/* RESERVAS */}
-
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-green-600">
-
-                    <div className="flex justify-between items-center">
-
-                        <div>
-
-                            <p className="text-gray-500">
-                                Total Reservas
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                {totalReservas}
-                            </h2>
-
-                        </div>
-
-                        <FaCalendarCheck className="text-green-600 text-4xl" />
-
-                    </div>
-
-                </div>
-
-
-                {/* INGRESOS */}
-
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-emerald-600">
-
-                    <div className="flex justify-between items-center">
-
-                        <div>
-
-                            <p className="text-gray-500">
-                                Ingresos
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                ${totalIngresos.toLocaleString("es-CO")}
-                            </h2>
-
-                        </div>
-
-                        <FaMoneyBillWave className="text-emerald-600 text-4xl" />
-
-                    </div>
-
-                </div>
-
-
-                {/* PROMOCIONES */}
-
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-orange-500">
-
-                    <div className="flex justify-between items-center">
-
-                        <div>
-
-                            <p className="text-gray-500">
-                                Promociones
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                {totalPromociones}
-                            </h2>
-
-                        </div>
-
-                        <FaBullhorn className="text-orange-500 text-4xl" />
-
-                    </div>
-
-                </div>
-
-
-                {/* CANCHAS */}
-
-                <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-green-700">
-
-                    <div className="flex justify-between items-center">
-
-                        <div>
-
-                            <p className="text-gray-500">
-                                Plataforma FutZone
-                            </p>
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                Activa
-                            </h2>
-
-                            <p className="text-sm text-gray-500 mt-2">
-                                Sistema funcionando correctamente
-                            </p>
-
-                        </div>
-
-                        <FaFutbol className="text-green-700 text-4xl" />
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* REPORTE DE TORNEOS */}
-
-            <div className="bg-white rounded-2xl shadow-lg mt-8 overflow-hidden text-gray-700">
-
-                <div className="p-6 border-b">
-
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Reporte de Torneos
-                    </h2>
-
-                    <p className="text-gray-500 mt-1">
-                        Resumen de los torneos registrados en FutZone
+                    <p className="text-gray-500 mt-2">
+                        Control y análisis de toda la plataforma deportiva.
                     </p>
 
-                </div>
-
-                <div className="overflow-x-auto">
-
-                    <table className="w-full">
-
-                        <thead>
-
-                            <tr className="bg-slate-800 text-white">
-
-                                <th className="p-4 text-left">
-                                    Torneo
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Tipo
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Equipos
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Fecha inicio
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Estado
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            {torneos.map((torneo) => (
-
-                                <tr
-                                    key={torneo.id}
-                                    className="border-b hover:bg-gray-50"
-                                >
-
-                                    <td className="p-4 font-semibold">
-                                        {torneo.nombre}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-                                        {torneo.tipo}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-                                        {torneo.equipos?.length || 0}
-                                        {" / "}
-                                        {torneo.equiposMaximos || 0}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-                                        {torneo.fechaInicio || "-"}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-sm font-semibold ${torneo.estado === "Activo"
-                                                ? "bg-green-100 text-green-700"
-                                                : torneo.estado === "Finalizado"
-                                                    ? "bg-gray-200 text-gray-700"
-                                                    : "bg-blue-100 text-blue-700"
-                                                }`}
-                                        >
-                                            {torneo.estado}
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
-                            ))}
-
-                            {torneos.length === 0 && (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="5"
-                                        className="p-8 text-center text-gray-500"
-                                    >
-                                        No hay torneos registrados.
-
-                                    </td>
-
-                                </tr>
-
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-            {/* REPORTE DE RESERVAS */}
-
-            <div className="bg-white rounded-2xl shadow-lg mt-8 overflow-hidden text-gray-700">
-
-                <div className="p-6 border-b">
-
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Reporte de Reservas
-                    </h2>
-
-                    <p className="text-gray-500 mt-1">
-                        Resumen de las reservas realizadas en FutZone
+                    <p className="text-xs text-gray-400 mt-2">
+                        {actualizado
+                            ? `Última actualización: ${actualizado.toLocaleString("es-CO")}`
+                            : "Esperando información del servidor..."}
                     </p>
-
                 </div>
 
-                <div className="overflow-x-auto">
-
-                    <table className="w-full">
-
-                        <thead>
-
-                            <tr className="bg-slate-800 text-white">
-
-                                <th className="p-4 text-left">
-                                    Usuario
-                                </th>
-
-                                <th className="p-4 text-left">
-                                    Cancha
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Fecha
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Hora
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Estado
-                                </th>
-
-                                <th className="p-4 text-center">
-                                    Valor
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            {reservas.map((reserva, index) => (
-
-                                <tr
-                                    key={reserva.id || index}
-                                    className="border-b hover:bg-gray-50"
-                                >
-
-                                    <td className="p-4 font-semibold">
-                                        {reserva.usuario || reserva.nombreUsuario || "-"}
-                                    </td>
-
-                                    <td className="p-4">
-                                        {reserva.cancha || reserva.nombreCancha || "-"}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-                                        {reserva.fecha || "-"}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-                                        {reserva.hora || reserva.horaInicio || "-"}
-                                    </td>
-
-                                    <td className="p-4 text-center">
-
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-sm font-semibold
-                                                ${reserva.estado === "Pendiente"
-                                                    ? "bg-yellow-100 text-yellow-700"
-                                                    : reserva.estado === "Confirmada"
-                                                        ? "bg-green-100 text-green-700"
-                                                        : "bg-red-100 text-red-700"
-                                                }
-                                        `}
-                                        >
-                                            {reserva.estado}
-                                        </span>
-
-                                    </td>
-
-                                    <td className="p-4 text-center font-semibold">
-                                        $
-                                        {Number(
-                                            reserva.valor ||
-                                            reserva.precio ||
-                                            reserva.total ||
-                                            0
-                                        ).toLocaleString("es-CO")}
-                                    </td>
-
-                                </tr>
-
-                            ))}
-
-                            {reservas.length === 0 && (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="6"
-                                        className="p-8 text-center text-gray-500"
-                                    >
-                                        No hay reservas registradas.
-
-                                    </td>
-
-                                </tr>
-
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-            {/* GRÁFICA DE TORNEOS */}
-
-            <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
-
-                <div className="mb-6">
-
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Torneos por estado
-                    </h2>
-
-                    <p className="text-gray-500">
-                        Distribución de los torneos registrados en FutZone
-                    </p>
-
-                </div>
-
-                <div className="w-full h-80">
-
-                    <ResponsiveContainer width="100%" height="100%">
-
-                        <BarChart data={datosTorneos}>
-
-                            <CartesianGrid strokeDasharray="3 3" />
-
-                            <XAxis dataKey="estado" />
-
-                            <YAxis allowDecimals={false} />
-
-                            <Tooltip />
-
-                            <Bar
-                                dataKey="cantidad"
-                                fill="#16a34a"
-                                radius={[8, 8, 0, 0]}
-                            />
-
-                        </BarChart>
-
-                    </ResponsiveContainer>
-
-                </div>
-
-            </div>
-            <br />
-            {/* GRÁFICA DE RESERVAS */}
-
-            <div className="bg-white rounded-2xl shadow-md p-6">
-
-                <h2 className="text-xl font-bold text-slate-800 mb-4">
-                    Estado de las Reservas
-                </h2>
-
-                <ResponsiveContainer width="100%" height={300}>
-
-                    <BarChart
-                        data={[
-                            {
-                                estado: "Pendiente",
-                                cantidad: reservasPendientes,
-                            },
-                            {
-                                estado: "Confirmada",
-                                cantidad: reservasConfirmadas,
-                            },
-                            {
-                                estado: "Cancelada",
-                                cantidad: reservasCanceladas,
-                            },
-                        ]}
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={cargarReportes}
+                        disabled={cargando}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 font-semibold shadow-sm disabled:opacity-50"
                     >
+                        <FaSyncAlt className={cargando ? "animate-spin" : ""} />
+                        Actualizar
+                    </button>
 
-                        <XAxis dataKey="estado" />
-
-                        <YAxis allowDecimals={false} />
-
-                        <Tooltip />
-
-                        <Bar
-                            dataKey="cantidad"
-                            fill="#00a63c"
-                            radius={[8, 8, 0, 0]}
-                        />
-
-                    </BarChart>
-
-                </ResponsiveContainer>
-
+                    <button
+                        onClick={generarPDF}
+                        disabled={cargando}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg shadow-green-600/20 disabled:opacity-50"
+                    >
+                        <FaFilePdf />
+                        Exportar PDF
+                    </button>
+                </div>
             </div>
 
-            {/* GRÁFICA DE INGRESOS */}
+            {/* AVISO DE CARGA */}
 
-            <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
+            {cargando && (
+                <div className="bg-white border border-gray-100 rounded-xl p-4 mb-6 flex items-center gap-3">
+                    <FaSyncAlt className="animate-spin text-green-600" />
+                    <span className="text-sm text-gray-600">
+                        Consultando información de FutZone...
+                    </span>
+                </div>
+            )}
 
-                <div className="mb-6">
+            {/* ERRORES DE CONEXIÓN */}
 
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Ingresos por mes
-                    </h2>
+            {Object.keys(errores).length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                    <div className="flex gap-2 items-center font-semibold text-amber-800">
+                        <FaExclamationTriangle />
+                        Algunas secciones no están disponibles
+                    </div>
 
-                    <p className="text-gray-500">
-                        Ingresos generados por reservas confirmadas
+                    <p className="text-sm text-amber-700 mt-2">
+                        Revisa las rutas del backend Django. Las secciones
+                        sin conexión no se contabilizan.
                     </p>
 
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        {Object.entries(errores).map(([nombre, error]) => (
+                            <span
+                                key={nombre}
+                                className="bg-white border border-amber-200 rounded-lg px-3 py-1 text-xs text-amber-800"
+                            >
+                                {nombre}: {error}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* TARJETAS PRINCIPALES */}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+
+                <Tarjeta
+                    titulo="Reservas"
+                    valor={totalReservas}
+                    descripcion="Registros encontrados"
+                    icono={FaCalendarCheck}
+                    color={COLORES.verde}
+                />
+
+                <Tarjeta
+                    titulo="Usuarios"
+                    valor={usuarios.length}
+                    descripcion="Usuarios registrados"
+                    icono={FaUsers}
+                    color={COLORES.azul}
+                />
+
+                <Tarjeta
+                    titulo="Canchas"
+                    valor={canchas.length}
+                    descripcion="Canchas registradas"
+                    icono={FaFutbol}
+                    color={COLORES.verde}
+                />
+
+                <Tarjeta
+                    titulo="Ingresos confirmados"
+                    valor={FORMATO_PESO.format(ingresosConfirmados)}
+                    descripcion="Valor de reservas confirmadas"
+                    icono={FaMoneyBillWave}
+                    color={COLORES.morado}
+                />
+
+                <Tarjeta
+                    titulo="Sedes"
+                    valor={sedes.length}
+                    descripcion="Sedes registradas"
+                    icono={FaBuilding}
+                    color={COLORES.naranja}
+                />
+
+                <Tarjeta
+                    titulo="Pagos"
+                    valor={pagos.length}
+                    descripcion="Registros de pagos"
+                    icono={FaCreditCard}
+                    color={COLORES.azul}
+                />
+
+                <Tarjeta
+                    titulo="Torneos"
+                    valor={torneos.length}
+                    descripcion={`${torneosActivos} torneos activos`}
+                    icono={FaTrophy}
+                    color={COLORES.morado}
+                />
+
+                <Tarjeta
+                    titulo="Promociones"
+                    valor={promociones.length}
+                    descripcion="Promociones registradas"
+                    icono={FaBullhorn}
+                    color={COLORES.naranja}
+                />
+            </div>
+
+            {/* SEGUNDO GRUPO */}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
+
+                <Tarjeta
+                    titulo="Publicaciones"
+                    valor={publicaciones.length}
+                    descripcion="Contenido publicado"
+                    icono={FaNewspaper}
+                    color={COLORES.azul}
+                />
+
+                <Tarjeta
+                    titulo="Equipos inscritos"
+                    valor={totalEquipos}
+                    descripcion="Equipos asociados a torneos"
+                    icono={FaUsers}
+                    color={COLORES.morado}
+                />
+
+                <Tarjeta
+                    titulo="Plataforma"
+                    valor="Conectada"
+                    descripcion="Panel administrativo FutZone"
+                    icono={FaCheckCircle}
+                    color={COLORES.verde}
+                />
+            </div>
+
+            {/* ESTADOS DE RESERVAS */}
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-8">
+
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm xl:col-span-2">
+                    <TituloSeccion
+                        titulo="Comportamiento de las reservas"
+                        descripcion="Distribución según el estado de cada reserva."
+                    />
+
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={datosEstados}>
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    vertical={false}
+                                />
+                                <XAxis dataKey="estado" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar
+                                    dataKey="cantidad"
+                                    name="Reservas"
+                                    radius={[8, 8, 0, 0]}
+                                >
+                                    {datosEstados.map((item) => (
+                                        <Cell
+                                            key={item.estado}
+                                            fill={item.color}
+                                        />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                <div className="w-full h-80">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                    <TituloSeccion
+                        titulo="Distribución"
+                        descripcion="Participación por estado."
+                    />
 
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={datosEstados}
+                                    dataKey="cantidad"
+                                    nameKey="estado"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={55}
+                                    outerRadius={85}
+                                    paddingAngle={4}
+                                >
+                                    {datosEstados.map((item) => (
+                                        <Cell
+                                            key={item.estado}
+                                            fill={item.color}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* INGRESOS */}
+
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6">
+                <TituloSeccion
+                    titulo="Ingresos por mes"
+                    descripcion="Valor asociado a reservas confirmadas, agrupado por fecha."
+                />
+
+                <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-
                         <BarChart data={datosIngresos}>
-
-                            <CartesianGrid strokeDasharray="3 3" />
-
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                vertical={false}
+                            />
                             <XAxis dataKey="mes" />
-
                             <YAxis
                                 tickFormatter={(valor) =>
-                                    `$${valor.toLocaleString("es-CO")}`
-                                }
-                            />
-
-                            <Tooltip
-                                formatter={(valor) =>
                                     `$${Number(valor).toLocaleString("es-CO")}`
                                 }
                             />
-
+                            <Tooltip
+                                formatter={(valor) =>
+                                    FORMATO_PESO.format(Number(valor))
+                                }
+                            />
                             <Bar
                                 dataKey="ingresos"
-                                fill="#16a34a"
+                                name="Valor confirmado"
+                                fill={COLORES.verde}
                                 radius={[8, 8, 0, 0]}
                             />
-
                         </BarChart>
-
                     </ResponsiveContainer>
-
                 </div>
-
             </div>
 
-            {/* GRÁFICA DE CANCHAS MÁS RESERVADAS */}
+            {/* CANCHAS MÁS RESERVADAS */}
 
-            <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6">
+                <TituloSeccion
+                    titulo="Canchas más reservadas"
+                    descripcion="Ranking de canchas según el número de reservas."
+                />
 
-                <div className="mb-6">
-
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Canchas más reservadas
-                    </h2>
-
-                    <p className="text-gray-500">
-                        Canchas con mayor cantidad de reservas
-                    </p>
-
-                </div>
-
-                <div className="w-full h-80">
-
+                <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-
                         <BarChart
                             data={datosCanchas}
                             layout="vertical"
-                            margin={{
-                                left: 20,
-                                right: 30,
-                            }}
+                            margin={{ left: 15, right: 25 }}
                         >
-
-                            <CartesianGrid strokeDasharray="3 3" />
-
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                horizontal={false}
+                            />
                             <XAxis
                                 type="number"
                                 allowDecimals={false}
                             />
-
                             <YAxis
                                 type="category"
                                 dataKey="cancha"
-                                width={120}
+                                width={130}
                             />
-
                             <Tooltip />
-
                             <Bar
                                 dataKey="cantidad"
-                                fill="#16a34a"
+                                name="Reservas"
+                                fill={COLORES.azul}
                                 radius={[0, 8, 8, 0]}
                             />
-
                         </BarChart>
-
                     </ResponsiveContainer>
-
                 </div>
-
             </div>
 
-            {/* INDICADORES DE RENDIMIENTO */}
+            {/* TORNEOS */}
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mt-6 overflow-hidden">
+                <div className="p-6">
+                    <TituloSeccion
+                        titulo="Torneos registrados"
+                        descripcion="Información general de las competiciones."
+                    />
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-800 text-white">
+                            <tr>
+                                <th className="p-4 text-left">Torneo</th>
+                                <th className="p-4 text-center">Tipo</th>
+                                <th className="p-4 text-center">Equipos</th>
+                                <th className="p-4 text-center">Inicio</th>
+                                <th className="p-4 text-center">Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {torneos.map((torneo, index) => (
+                                <tr
+                                    key={torneo.id || torneo.id_torneo || index}
+                                    className="border-b hover:bg-slate-50"
+                                >
+                                    <td className="p-4 font-semibold">
+                                        {torneo.nombre || "Sin nombre"}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        {torneo.tipo || "-"}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        {Array.isArray(torneo.equipos)
+                                            ? torneo.equipos.length
+                                            : torneo.total_equipos || 0}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        {formatearFecha(
+                                            torneo.fechaInicio ||
+                                            torneo.fecha_inicio
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <Estado estado={torneo.estado} />
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {torneos.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan="5"
+                                        className="p-8 text-center text-gray-400"
+                                    >
+                                        No hay torneos disponibles o el
+                                        endpoint todavía no está configurado.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* RESERVAS */}
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mt-6 overflow-hidden">
+                <div className="p-6">
+                    <TituloSeccion
+                        titulo="Registro de reservas"
+                        descripcion="Detalle de las reservas consultadas desde Django."
+                    />
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-800 text-white">
+                            <tr>
+                                <th className="p-4 text-left">Usuario</th>
+                                <th className="p-4 text-left">Cancha</th>
+                                <th className="p-4 text-center">Fecha</th>
+                                <th className="p-4 text-center">Hora</th>
+                                <th className="p-4 text-center">Estado</th>
+                                <th className="p-4 text-right">Valor</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {reservas.map((reserva, index) => (
+                                <tr
+                                    key={
+                                        reserva.id_reserva ||
+                                        reserva.id ||
+                                        index
+                                    }
+                                    className="border-b hover:bg-slate-50"
+                                >
+                                    <td className="p-4 font-medium">
+                                        {obtenerNombreUsuario(reserva)}
+                                    </td>
+
+                                    <td className="p-4">
+                                        {obtenerNombreCancha(reserva)}
+                                    </td>
+
+                                    <td className="p-4 text-center">
+                                        {formatearFecha(
+                                            obtenerFecha(reserva)
+                                        )}
+                                    </td>
+
+                                    <td className="p-4 text-center">
+                                        {obtenerHora(reserva)}
+                                    </td>
+
+                                    <td className="p-4 text-center">
+                                        <Estado estado={reserva.estado} />
+                                    </td>
+
+                                    <td className="p-4 text-right font-semibold">
+                                        {FORMATO_PESO.format(
+                                            obtenerValor(reserva)
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {reservas.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan="6"
+                                        className="p-8 text-center text-gray-400"
+                                    >
+                                        No hay reservas disponibles.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* INDICADORES */}
 
             <div className="mt-8">
+                <TituloSeccion
+                    titulo="Indicadores de rendimiento"
+                    descripcion="Métricas generales de la operación de FutZone."
+                />
 
-                <div className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        Indicadores de rendimiento
-                    </h2>
+                    <div className="bg-white rounded-2xl p-6 border-l-4 border-green-500 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <p className="text-gray-500 font-medium">
+                                Tasa de confirmación
+                            </p>
+                            <FaCheckCircle className="text-green-600 text-2xl" />
+                        </div>
 
-                    <p className="text-gray-500">
-                        Métricas generales de las reservas
+                        <h3 className="text-4xl font-black text-green-600 mt-3">
+                            {tasaConfirmacion}%
+                        </h3>
+
+                        <div className="w-full bg-gray-100 rounded-full h-2 mt-4">
+                            <div
+                                className="bg-green-500 h-2 rounded-full"
+                                style={{ width: `${tasaConfirmacion}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border-l-4 border-red-500 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <p className="text-gray-500 font-medium">
+                                Tasa de cancelación
+                            </p>
+                            <FaTimesCircle className="text-red-600 text-2xl" />
+                        </div>
+
+                        <h3 className="text-4xl font-black text-red-600 mt-3">
+                            {tasaCancelacion}%
+                        </h3>
+
+                        <div className="w-full bg-gray-100 rounded-full h-2 mt-4">
+                            <div
+                                className="bg-red-500 h-2 rounded-full"
+                                style={{ width: `${tasaCancelacion}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-6 border-l-4 border-yellow-500 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <p className="text-gray-500 font-medium">
+                                Reservas pendientes
+                            </p>
+                            <FaClock className="text-yellow-600 text-2xl" />
+                        </div>
+
+                        <h3 className="text-4xl font-black text-yellow-600 mt-3">
+                            {reservasPendientes.length}
+                        </h3>
+
+                        <p className="text-xs text-gray-400 mt-4">
+                            Reservas que requieren atención.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* PIE DE PÁGINA */}
+
+            <div className="mt-8 p-5 rounded-2xl bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                    <p className="font-bold flex items-center gap-2">
+                        <FaFutbol className="text-green-400" />
+                        FutZone | Administración
                     </p>
-
+                    <p className="text-xs text-slate-400 mt-1">
+                        Centro de reportes y estadísticas generales.
+                    </p>
                 </div>
 
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-
-                    {/* TASA DE CONFIRMACIÓN */}
-
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-600">
-
-                        <p className="text-gray-500 font-medium">
-                            Tasa de confirmación
-                        </p>
-
-                        <div className="flex items-center justify-between mt-3">
-
-                            <h3 className="text-4xl font-bold text-green-600">
-                                {tasaConfirmacion}%
-                            </h3>
-
-                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-
-                                <span className="text-green-600 text-2xl">
-                                    ✓
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                        <p className="text-sm text-gray-500 mt-3">
-                            Reservas confirmadas
-                        </p>
-
-                    </div>
-
-
-                    {/* TASA DE CANCELACIÓN */}
-
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600">
-
-                        <p className="text-gray-500 font-medium">
-                            Tasa de cancelación
-                        </p>
-
-                        <div className="flex items-center justify-between mt-3">
-
-                            <h3 className="text-4xl font-bold text-red-600">
-                                {tasaCancelacion}%
-                            </h3>
-
-                            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-
-                                <span className="text-red-600 text-2xl">
-                                    ×
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                        <p className="text-sm text-gray-500 mt-3">
-                            Reservas canceladas
-                        </p>
-
-                    </div>
-
-
-                    {/* TOTAL RESERVAS */}
-
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-600">
-
-                        <p className="text-gray-500 font-medium">
-                            Reservas registradas
-                        </p>
-
-                        <div className="flex items-center justify-between mt-3">
-
-                            <h3 className="text-4xl font-bold text-blue-600">
-                                {totalReservasIndicador}
-                            </h3>
-
-                            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-
-                                <span className="text-blue-600 text-2xl">
-                                    📅
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                        <p className="text-sm text-gray-500 mt-3">
-                            Total de reservas
-                        </p>
-
-                    </div>
-
-                </div>
-
+                <p className="text-xs text-slate-400">
+                    Datos consultados desde el backend Django.
+                </p>
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import NavBar from "@/app/components/publico/NavBar";
 import ContenidoPrincipal from "@/app/components/publico/ContenidoPrincipal";
@@ -9,7 +9,6 @@ import Footer from "@/app/components/publico/Footer";
 import SplashScreen from "./components/publico/SplashScreen";
 
 export default function Home() {
-    const router = useRouter();
     const [mostrarSplash, setMostrarSplash] = useState(true);
 
     // VALIDACIÓN DE SESIÓN EN EL HOME

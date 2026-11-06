@@ -1,22 +1,12 @@
-import NotificacionesJugador from "../components/publico/NotificacionesJugador";
-import DashboardNavbar from "../components/usuario/DashboardNavBar";
 
+import NotificacionesJugador from "../components/publico/NotificacionesJugador";
 
 export default function Page() {
     return (
-        <>
-            
-            <div className="min-h-screen bg-slate-100 py-10">
-
-
-                <div className="max-w-7xl mx-auto px-8">
-
-
-                    <NotificacionesJugador />
-
-                </div>
-
+        <main className="min-h-screen bg-slate-100 py-10">
+            <div className="mx-auto max-w-7xl px-8">
+                <NotificacionesJugador />
             </div>
-        </>
+        </main>
     );
 }
