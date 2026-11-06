@@ -1,14 +1,14 @@
-
 "use client";
 
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/publico/NavBar";
 import ContenidoPrincipal from "@/app/components/publico/ContenidoPrincipal";
 import Footer from "@/app/components/publico/Footer";
 import SplashScreen from "./components/publico/SplashScreen";
 
 export default function Home() {
+    const router = useRouter(); // 👈 Inicialización obligatoria del router
     const [mostrarSplash, setMostrarSplash] = useState(true);
 
     // VALIDACIÓN DE SESIÓN EN EL HOME
