@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-
 import { MapPin, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -25,15 +24,21 @@ export default function CardCancha({ cancha }) {
 
     router.push(`/reserva/${cancha.id}`);
   };
+
+  const imagen = cancha.imagen || "/images/cancha1.jpg";
+
   return (
     <div className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 hover:-translate-y-2">
-      <Image
-        src={cancha.imagen}
-        alt={cancha.nombre}
-        width={500}
-        height={300}
-        className="w-full h-56 object-cover"
-      />
+      <div className="relative w-full h-56">
+        <Image
+          src={imagen}
+          alt={cancha.nombre || "Cancha de fútbol"}
+          fill
+          unoptimized
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+        />
+      </div>
 
       <div className="p-6">
         <div className="flex justify-between items-center">
@@ -43,8 +48,7 @@ export default function CardCancha({ cancha }) {
 
           <div className="flex items-center gap-1">
             <Star size={18} className="text-yellow-500 fill-yellow-400" />
-
-            <span className="font-bold">{cancha.calificacion}</span>
+            <span className="font-bold">{cancha.calificacion ?? "Nuevo"}</span>
           </div>
         </div>
 
@@ -54,13 +58,12 @@ export default function CardCancha({ cancha }) {
 
         <div className="flex items-center gap-2 mt-5 text-slate-500">
           <MapPin size={18} />
-
           <span>{cancha.direccion}</span>
         </div>
 
         <div className="mt-6 flex justify-between items-center">
           <p className="text-2xl font-black text-green-600">
-            ${cancha.precio.toLocaleString()}
+            ${Number(cancha.precio || 0).toLocaleString("es-CO")}
           </p>
 
           <button

@@ -5,7 +5,7 @@ export default function DashboardPage() {
         <>
 
             <div className="min-h-screen bg-slate-100">
-                <div className="max-w-7xl mx-auto px-8 py-10">
+                <div className="max-w-7xl mx-auto px-2 py-2">
 
                     <DashboardComponent />
 
