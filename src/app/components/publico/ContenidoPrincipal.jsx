@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 export default function ContenidoPrincipal() {
-  
+
   return (
     <section
-      className="min-h-screen bg-cover bg-center flex items-center "
+      className="min-h-screen bg-cover bg-center flex items-center  "
       style={{
         backgroundImage: "url('/images/fondo homepage 2.jpg')",
         backgroundPosition: "center 100%",

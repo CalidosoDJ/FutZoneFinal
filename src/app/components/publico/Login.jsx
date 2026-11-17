@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft, Check, Loader2 } from "lucide-react";
@@ -17,6 +17,92 @@ export default function LoginComponent() {
     const [nombreUsuario, setNombreUsuario] = useState("");
     const [progreso, setProgreso] = useState(0);
     const [modalAbierto, setModalAbierto] = useState(false);
+
+    const googleButtonRef = useRef(null);
+
+    // funcion para iniciar sesión con Google
+    useEffect(() => {
+        const handleGoogleSuccess = async (response) => {
+            setCargando(true);
+            setProgreso(30);
+
+            try {
+                const res = await fetch("/api/auth/google", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: response.credential }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.usuario) {
+                    const usuario = data.usuario;
+
+                    setProgreso(65);
+                    setNombreUsuario(usuario.nombre_completo || usuario.username || "Usuario");
+
+                    setTimeout(() => {
+                        setExito(true);
+                        setProgreso(100);
+                    }, 400);
+
+                    localStorage.setItem("usuarioLogueado", JSON.stringify(usuario));
+
+                    setTimeout(() => {
+                        if (usuario.id_rol === 1) {
+                            router.push("/admin");
+                            return;
+                        }
+                        if (usuario.id_rol === 3) {
+                            router.push("/arbitro/dashboard");
+                            return;
+                        }
+                        router.push("/dashboard");
+                    }, 1600);
+                } else {
+                    alert(data.message || "No se pudo iniciar sesión con Google");
+                    setCargando(false);
+                    setProgreso(0);
+                }
+            } catch (err) {
+                console.error("Error al autenticar con Google:", err);
+                alert("Ocurrió un error al conectar con Google.");
+                setCargando(false);
+                setProgreso(0);
+            }
+        };
+
+        const renderGoogleButton = () => {
+            if (window.google?.accounts?.id && googleButtonRef.current) {
+                window.google.accounts.id.initialize({
+                    client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                    callback: handleGoogleSuccess,
+                });
+
+                googleButtonRef.current.innerHTML = "";
+                window.google.accounts.id.renderButton(googleButtonRef.current, {
+                    type: "standard",
+                    theme: "outline",
+                    size: "large",
+                    text: "continue_with",
+                    shape: "pill",
+                    width: 300,
+                });
+            }
+        };
+
+        const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+        if (!existingScript) {
+            const script = document.createElement("script");
+            script.src = "https://accounts.google.com/gsi/client";
+            script.async = true;
+            script.defer = true;
+            script.onload = renderGoogleButton;
+            document.body.appendChild(script);
+        } else {
+            renderGoogleButton();
+        }
+    }, [router]);
 
     const iniciarSesion = async (e) => {
         e.preventDefault();
@@ -104,8 +190,8 @@ export default function LoginComponent() {
     };
 
     return (
-        <section className="min-h-screen flex bg-black overflow-hidden">
-            <div className="w-full lg:w-[40%] bg-white flex items-center justify-center px-12 py-8 relative">
+        <section className="h-dvh w-full flex bg-black overflow-hidden">
+            <div className="w-full lg:w-[40%] h-full bg-white flex items-center justify-center px-6 sm:px-10 py-4 relative overflow-hidden">
 
                 {/* 🌟 TARJETA CON BARRA DE CARGA PROGRESIVA */}
                 {cargando ? (
@@ -146,14 +232,14 @@ export default function LoginComponent() {
                     /* FORMULARIO DE LOGIN */
                     <form
                         onSubmit={iniciarSesion}
-                        className="w-full max-w-lg transition-all"
+                        className="w-full max-w-md transition-all"
                     >
-                        <div className="mb-2">
+                        <div className="mb-4">
                             <Link
                                 href="/"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-green-600 transition-colors duration-200 group mb-6"
+                                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-green-600 transition-colors duration-200 group mb-3"
                             >
-                                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
+                                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
                                 <span>Volver al Inicio</span>
                             </Link>
 
@@ -161,18 +247,18 @@ export default function LoginComponent() {
                                 href="/"
                                 className="block w-fit hover:opacity-85 transition-opacity cursor-pointer"
                             >
-                                <h1 className="text-5xl font-bold text-gray-900 mb-2">
+                                <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-1">
                                     Fut<span className="text-green-500">Zone</span>
                                 </h1>
                             </Link>
 
-                            <p className="text-black text-xl">
+                            <p className="text-black text-base sm:text-lg">
                                 Inicia sesión para continuar
                             </p>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="text-black block mb-2">
+                        <div className="mb-3.5">
+                            <label className="text-black text-sm font-medium block mb-1.5">
                                 Correo
                             </label>
 
@@ -182,12 +268,12 @@ export default function LoginComponent() {
                                 value={correo}
                                 onChange={(e) => setCorreo(e.target.value)}
                                 required
-                                className="w-full bg-gray-300 border border-black text-black p-4 rounded-2xl outline-none focus:border-gray-950 transition"
+                                className="w-full bg-gray-300 border border-black text-black px-4 py-3 rounded-2xl outline-none focus:border-gray-950 transition text-sm sm:text-base"
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label className="text-black block mb-2 font-medium">
+                        <div className="mb-3.5">
+                            <label className="text-black text-sm font-medium block mb-1.5">
                                 Contraseña
                             </label>
 
@@ -198,7 +284,7 @@ export default function LoginComponent() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full bg-gray-300 border border-black text-black p-4 pr-12 rounded-2xl outline-none focus:border-gray-950 transition"
+                                    className="w-full bg-gray-300 border border-black text-black px-4 py-3 pr-12 rounded-2xl outline-none focus:border-gray-950 transition text-sm sm:text-base"
                                 />
 
                                 <button
@@ -214,9 +300,9 @@ export default function LoginComponent() {
                                     className="absolute right-4 text-gray-700 hover:text-black transition cursor-pointer p-1"
                                 >
                                     {mostrarPassword ? (
-                                        <EyeOff size={22} />
+                                        <EyeOff size={20} />
                                     ) : (
-                                        <Eye size={22} />
+                                        <Eye size={20} />
                                     )}
                                 </button>
                             </div>
@@ -224,7 +310,7 @@ export default function LoginComponent() {
                             <button
                                 type="button"
                                 onClick={() => setModalAbierto(true)}
-                                className="text-xs text-green-600 hover:text-green-700 font-semibold transition-colors cursor-pointer mt-3 block ml-auto"
+                                className="text-xs text-green-600 hover:text-green-700 font-semibold transition-colors cursor-pointer mt-2 block ml-auto"
                             >
                                 ¿Olvidaste tu contraseña?
                             </button>
@@ -238,17 +324,34 @@ export default function LoginComponent() {
                         <button
                             type="submit"
                             disabled={cargando}
-                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-500 transition text-white p-4 rounded-2xl text-lg font-semibold cursor-pointer"
+                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-500 transition text-white py-3.5 px-4 rounded-2xl text-base sm:text-lg font-semibold cursor-pointer shadow-md hover:shadow-lg"
                         >
                             Iniciar Sesión
                         </button>
 
-                        <p className="text-gray-400 mt-6 text-center">
-                            ¿No tienes cuenta?{" "}
+                        {/* SEPARADOR Y BOTÓN DE GOOGLE MEJORADO */}
+                        <div className="my-4">
+                            <div className="relative flex items-center justify-center mb-3">
+                                <div className="border-t border-gray-300 w-full"></div>
+                                <span className="bg-white px-3 text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">
+                                    o continúa con
+                                </span>
+                                <div className="border-t border-gray-300 w-full"></div>
+                            </div>
 
+                            <div className="flex justify-center">
+                                <div
+                                    ref={googleButtonRef}
+                                    className="transition-transform duration-200 hover:scale-[1.02] rounded-full shadow-sm hover:shadow-md"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <p className="text-gray-500 text-sm mt-3 text-center">
+                            ¿No tienes cuenta?{" "}
                             <span
                                 onClick={() => router.push("/register")}
-                                className="text-green-500 cursor-pointer hover:text-green-400"
+                                className="text-green-600 font-semibold cursor-pointer hover:text-green-500"
                             >
                                 Regístrate
                             </span>
@@ -259,7 +362,7 @@ export default function LoginComponent() {
 
             {/* COLUMNA DERECHA */}
             <div
-                className="hidden lg:flex lg:w-[60%] bg-cover bg-center relative"
+                className="hidden lg:flex lg:w-[60%] h-full bg-cover bg-center relative"
                 style={{
                     backgroundImage: "url('/images/login3.avif')",
                 }}

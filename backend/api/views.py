@@ -1,4 +1,7 @@
-
+import secrets
+from datetime import timedelta
+from django.core.mail import send_mail
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from openai import OpenAI, OpenAIError
 from django.conf import settings
@@ -12,6 +15,10 @@ from rest_framework.parsers import (
     FormParser,
     JSONParser,
 )
+from django.contrib.auth.models import User
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 from django.core.files.storage import default_storage
 from .serializers import PublicacionSerializer
 
@@ -477,3 +484,75 @@ def asistente(request):
         {"error": "Error de conexión con OpenAI."},
         status=status.HTTP_502_BAD_GATEWAY
     )
+
+# AUTENTICACIÓN CON GOOGLE EN MODELO DE USUARIOS
+GOOGLE_CLIENT_ID = "1064991779486-2877c5ghm1oc1hgkpg61vh089m3hbdaf.apps.googleusercontent.com"
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_auth(request):
+    token = request.data.get('token')
+
+    if not token:
+        return Response(
+            {'message': 'Token no proporcionado'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Validar token directamente con los servidores de Google
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
+
+        email = idinfo.get('email')
+        full_name = idinfo.get('name', '')
+        
+        if not email:
+            return Response(
+                {'message': 'El token de Google no contiene un email válido'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Buscar si el usuario ya existe en la tabla MySQL 'Usuarios'
+        try:
+            usuario = Usuarios.objects.get(email=email)
+            creado = False
+        except Usuarios.DoesNotExist:
+            # 3. Si no existe, crear automáticamente con id_rol_id=2 (Jugador)
+            username_base = email.split('@')[0]
+            usuario = Usuarios.objects.create(
+                nombre_completo=full_name or username_base,
+                username=username_base,
+                email=email,
+                telefono="",
+                password_hash=make_password(secrets.token_hex(16)), # Contraseña aleatoria segura
+                id_rol_id=2,  # Rol por defecto (Cliente/Jugador)
+                estado="Activo"
+            )
+            creado = True
+
+        # 4. Responder a Next.js exactamente igual que tu LoginSerializer
+        return Response({
+            "mensaje": "Inicio de sesión exitoso con Google",
+            "creado": creado,
+            "usuario": {
+                "id_usuario": usuario.id_usuario,
+                "nombre_completo": usuario.nombre_completo,
+                "username": usuario.username,
+                "email": usuario.email,
+                "telefono": usuario.telefono,
+                "id_rol": usuario.id_rol_id,
+                "estado": usuario.estado,
+            }
+        }, status=status.HTTP_200_OK)
+
+    except ValueError:
+        return Response(
+            {'message': 'Token de Google inválido o expirado'}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    except Exception as e:
+        print("Error en Google Auth Django:", str(e))
+        return Response(
+            {'message': f'Error interno en Django: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -97,7 +97,7 @@ export default function DashboardNavbar() {
 
     const enlaces = [
         { nombre: "Dashboard", ruta: "/dashboard" },
-         { nombre: "Canchas", ruta: "/canchas" },
+        { nombre: "Canchas", ruta: "/canchas" },
         { nombre: "Mis reservas", ruta: "/mis-reservas" },
         { nombre: "Mapa", ruta: "/mapa" },
         { nombre: "Mi perfil", ruta: "/perfil" },
@@ -107,9 +107,9 @@ export default function DashboardNavbar() {
         pathname === ruta || pathname?.startsWith(`${ruta}/`);
 
     return (
-        <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#080d0b]/95 text-white shadow-[0_10px_35px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+        <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-gray-950 text-white shadow-[0_10px_35px_rgba(0,0,0,0.25)] backdrop-blur-xl">
             {/* Línea decorativa */}
-            <div className="h-[2px] bg-gradient-to-r from-transparent via-green-400 to-transparent opacity-80" />
+            <div className="h-[2px] bg-gray-950 via-green-400 to-transparent opacity-80" />
 
             <nav className="mx-auto flex min-h-[76px] max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
                 {/* LOGO */}
@@ -130,7 +130,7 @@ export default function DashboardNavbar() {
                     </div>
 
                     <div>
-                        <h1 className="text-xl font-black uppercase italic leading-none tracking-tight sm:text-2xl">
+                        <h1 className="font-bold text-2xl">
                             FUT<span className="text-green-400">ZONE</span>
                         </h1>
                         <p className="mt-1.5 hidden text-[9px] font-bold uppercase tracking-[0.28em] text-gray-500 sm:block">
@@ -149,8 +149,8 @@ export default function DashboardNavbar() {
                                 key={enlace.ruta}
                                 href={enlace.ruta}
                                 className={`relative rounded-xl px-4 py-3 text-sm font-bold transition duration-200 ${activo
-                                        ? "bg-green-400/10 text-green-300"
-                                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                    ? "bg-green-400/10 text-green-300"
+                                    : "text-gray-400 hover:bg-white/5 hover:text-white"
                                     }`}
                             >
                                 {activo && (
@@ -175,8 +175,8 @@ export default function DashboardNavbar() {
                             aria-label="Abrir notificaciones"
                             aria-expanded={mostrarDropdown}
                             className={`relative flex h-11 w-11 items-center justify-center rounded-xl border transition ${mostrarDropdown
-                                    ? "border-green-400/40 bg-green-400/10 text-green-300"
-                                    : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-green-400/30 hover:bg-green-400/10 hover:text-green-300"
+                                ? "border-green-400/40 bg-green-400/10 text-green-300"
+                                : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-green-400/30 hover:bg-green-400/10 hover:text-green-300"
                                 }`}
                         >
                             <Bell size={20} />
@@ -244,8 +244,8 @@ export default function DashboardNavbar() {
                                                 <div
                                                     key={n.id}
                                                     className={`group p-4 transition hover:bg-white/[0.035] ${!n.leida
-                                                            ? "border-l-2 border-green-400 bg-green-400/[0.035]"
-                                                            : "border-l-2 border-transparent"
+                                                        ? "border-l-2 border-green-400 bg-green-400/[0.035]"
+                                                        : "border-l-2 border-transparent"
                                                         }`}
                                                 >
                                                     <div className="flex items-start gap-3">
@@ -376,8 +376,8 @@ export default function DashboardNavbar() {
                                     key={enlace.ruta}
                                     href={enlace.ruta}
                                     className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-sm font-bold transition ${activo
-                                            ? "border-green-400/20 bg-green-400/10 text-green-300"
-                                            : "border-transparent text-gray-400 hover:bg-white/[0.04] hover:text-white"
+                                        ? "border-green-400/20 bg-green-400/10 text-green-300"
+                                        : "border-transparent text-gray-400 hover:bg-white/[0.04] hover:text-white"
                                         }`}
                                 >
                                     {enlace.nombre}

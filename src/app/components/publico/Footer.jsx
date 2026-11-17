@@ -1,262 +1,211 @@
+"use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-
+import { useRouter } from "next/navigation";
 import {
-  ArrowUpRight,
-  MapPin,
-  Trophy,
-  CalendarDays,
-  ShieldCheck,
   MessageCircle,
-  Mail,
-  Phone,
+  Sparkles,
+  X,
+  LogIn,
+  UserPlus,
   ChevronRight,
-  ExternalLink,
+  ShieldCheck,
+  Trophy,
 } from "lucide-react";
 
 export default function Footer() {
   const anio = new Date().getFullYear();
+  const router = useRouter();
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  const enlaces = [
-    { nombre: "Inicio", href: "/" },
-    { nombre: "Lista de canchas", href: "/canchas" },
-    { nombre: "Mis reservas", href: "/mis-reservas" },
-    { nombre: "Torneos", href: "/torneos" },
-    { nombre: "Mi perfil", href: "/perfil" },
-  ];
-
-  const servicios = [
-    {
-      icono: MapPin,
-      titulo: "Encuentra tu cancha",
-      href: "/canchas",
-    },
-    {
-      icono: CalendarDays,
-      titulo: "Gestiona tus reservas",
-      href: "/mis-reservas",
-    },
-    {
-      icono: Trophy,
-      titulo: "Vive los torneos",
-      href: "/torneos",
-    },
-  ];
-
+  // Redes Sociales Oficiales
   const redes = [
     {
       nombre: "Facebook",
       imagen: "/icons/facebook.png",
       href: "https://www.facebook.com/",
-      color: "hover:bg-blue-600",
+      color: "hover:bg-blue-600 hover:text-white border-gray-200",
     },
     {
       nombre: "Instagram",
       imagen: "/icons/instagram.png",
       href: "https://www.instagram.com/",
-      color: "hover:bg-pink-600",
+      color: "hover:bg-pink-600 hover:text-white border-gray-200",
     },
     {
       nombre: "WhatsApp",
       icono: MessageCircle,
       href: "https://wa.me/",
-      color: "hover:bg-green-600",
+      color: "hover:bg-green-600 hover:text-white border-gray-200",
     },
   ];
 
   return (
-    <footer className="relative mt-20 overflow-hidden border-t border-green-400/20 bg-[#070b08] text-white">
-      {/* Brillo decorativo superior */}
-      <div className="absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-green-400 to-transparent" />
+    <>
+      <footer className="relative border-t border-gray-200 bg-gray-950 font-sans text-gray-800 shadow-xs">
+        {/* Línea verde decorativa superior */}
+        <div className="absolute left-1/2 top-0 h-[2px] w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-green-500 to-transparent" />
 
-      <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-green-500/[0.06] blur-[100px]" />
-      <div className="pointer-events-none absolute -right-32 bottom-0 h-72 w-72 rounded-full bg-emerald-400/[0.05] blur-[100px]" />
+        <div className="relative mx-auto max-w-7xl px-6 py-10 sm:px-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
 
-      <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
-        {/* BLOQUE PRINCIPAL */}
-        <div className="grid gap-12 py-14 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1fr_1fr] lg:gap-10 lg:py-16">
-          {/* MARCA */}
-          <div>
-            <Link
-              href="/"
-              className="group inline-flex items-center gap-3"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-green-400/30 bg-green-400/10 p-1 shadow-[0_0_25px_rgba(74,222,128,0.08)] transition duration-300 group-hover:border-green-400/70 group-hover:shadow-[0_0_30px_rgba(74,222,128,0.18)]">
-                <Image
-                  src="/icons/futzone logo.jpeg"
-                  alt="Logo FutZone"
-                  width={48}
-                  height={48}
-                  className="h-full w-full rounded-xl object-contain"
-                />
-              </div>
+            {/* 1. MARCA Y PRESENTACIÓN */}
+            <div className="flex items-center gap-4">
+              <Link href="/" className="group flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-green-200 bg-green-50 p-1 transition group-hover:border-green-500 shadow-2xs">
+                  <Image
+                    src="/icons/futzone logo.jpeg"
+                    alt="Logo FutZone"
+                    width={40}
+                    height={40}
+                    className="h-full w-full rounded-xl object-contain"
+                  />
+                </div>
 
-              <div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight">
-                  FUT<span className="text-green-400">ZONE</span>
-                </h2>
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.28em] text-gray-500">
-                  Tu pasión, tu cancha
-                </p>
-              </div>
-            </Link>
-
-            <p className="mt-6 max-w-sm text-sm leading-7 text-gray-400">
-              Tu próximo partido comienza aquí. Encuentra
-              canchas, organiza tus encuentros y disfruta el
-              fútbol con toda tu gente.
-            </p>
-
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-green-400/20 bg-green-400/[0.07] px-4 py-2">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-              <span className="text-xs font-bold text-green-300">
-                La pasión nunca se detiene
-              </span>
-            </div>
-          </div>
-
-          {/* NAVEGACIÓN */}
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em]">
-              <span className="h-5 w-1 rounded-full bg-green-400" />
-              Navegación
-            </h3>
-
-            <ul className="mt-6 space-y-4">
-              {enlaces.map((enlace) => (
-                <li key={enlace.href}>
-                  <Link
-                    href={enlace.href}
-                    className="group inline-flex items-center gap-2 text-sm text-gray-400 transition hover:text-green-300"
-                  >
-                    <ChevronRight
-                      size={15}
-                      className="text-gray-600 transition group-hover:translate-x-1 group-hover:text-green-400"
-                    />
-                    {enlace.nombre}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* SERVICIOS */}
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em]">
-              <span className="h-5 w-1 rounded-full bg-green-400" />
-              Vive FutZone
-            </h3>
-
-            <div className="mt-6 space-y-3">
-              {servicios.map((servicio) => {
-                const Icono = servicio.icono;
-
-                return (
-                  <Link
-                    key={servicio.href}
-                    href={servicio.href}
-                    className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 transition duration-200 hover:border-green-400/20 hover:bg-green-400/[0.06]"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-400/10 text-green-400 transition group-hover:bg-green-400 group-hover:text-black">
-                      <Icono size={19} />
-                    </div>
-
-                    <span className="flex-1 text-xs font-bold text-gray-300 transition group-hover:text-white">
-                      {servicio.titulo}
-                    </span>
-
-                    <ArrowUpRight
-                      size={15}
-                      className="text-gray-600 transition group-hover:text-green-400"
-                    />
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* REDES Y CONTACTO */}
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em]">
-              <span className="h-5 w-1 rounded-full bg-green-400" />
-              Conecta con nosotros
-            </h3>
-
-            <p className="mt-6 text-sm leading-6 text-gray-400">
-              Sigue la comunidad y mantente al día con las
-              novedades de FutZone.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              {redes.map((red) => {
-                const Icono = red.icono;
-
-                return (
-                  <a
-                    key={red.nombre}
-                    href={red.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={red.nombre}
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 transition-all ${red.color}`}
-                  >
-                    {red.imagen ? (
-                      <Image
-                        src={red.imagen}
-                        alt={red.nombre}
-                        width={22}
-                        height={22}
-                        className="object-contain"
-                      />
-                    ) : (
-                      <Icono size={20} />
-                    )}
-                  </a>
-                );
-              })}
-            </div>
-
-            <div className="mt-7 rounded-2xl border border-green-400/15 bg-gradient-to-br from-green-400/[0.09] to-transparent p-4">
-              <div className="flex items-center gap-2 text-green-300">
-                <ShieldCheck size={19} />
-                <span className="text-xs font-black uppercase tracking-wide">
-                  Tu experiencia deportiva
-                </span>
-              </div>
-
-              <p className="mt-2 text-xs leading-5 text-gray-400">
-                Explora, elige tu cancha y prepárate para
-                jugar.
-              </p>
-
-              <Link
-                href="/canchas"
-                className="mt-4 inline-flex items-center gap-2 text-xs font-black text-green-400 transition hover:text-green-300"
-              >
-                EXPLORAR CANCHAS
-                <ArrowUpRight size={15} />
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    FUT<span className="text-green-600">ZONE</span>
+                  </h2>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-gray-400">
+                    Tu pasión, tu cancha
+                  </p>
+                </div>
               </Link>
             </div>
+
+            {/* 2. BOTÓN INTERACTIVO "CONOCE MÁS" */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setModalAbierto(true)}
+                className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 px-5 py-3 text-xs font-bold text-white shadow-md shadow-green-600/20 transition hover:from-green-700 hover:to-emerald-600 hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Sparkles size={16} className="animate-pulse text-green-200" />
+                <span>Conoce más sobre FutZone</span>
+                <ChevronRight size={15} className="transition group-hover:translate-x-1" />
+              </button>
+            </div>
+
+            {/* 3. REDES SOCIALES */}
+            <div className="flex items-center gap-3">
+              <span className="text-2x1 font-bold text-white uppercase tracking-wider hidden sm:inline-block">
+                Síguenos:
+              </span>
+              <div className="flex gap-2">
+                {redes.map((red) => {
+                  const Icono = red.icono;
+
+                  return (
+                    <a
+                      key={red.nombre}
+                      href={red.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={red.nombre}
+                      className={`flex h-15 w-15 items-center justify-center rounded-2xl border bg-gray-50 text-gray-600 shadow-2xs transition-all ${red.color}`}
+                    >
+                      {red.imagen ? (
+                        <Image
+                          src={red.imagen}
+                          alt={red.nombre}
+                          width={20}
+                          height={20}
+                          className="object-contain"
+                        />
+                      ) : (
+                        <Icono size={20} />
+                      )}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+
+          <div className="mt-8 border-gray-100 pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500">
+            <p className="text-center sm:text-left">
+              © {anio} <span className="font-bold text-gray-800">FutZone</span>. Todos los derechos reservados.
+            </p>
+            <div className="flex items-center justify-center gap-1.5 font-medium">
+              Popayán, Colombia <span className="text-green-600">⚽</span>
+            </div>
           </div>
         </div>
+      </footer>
 
-        {/* BARRA INFERIOR */}
-        <div className="flex flex-col gap-4 border-t border-white/[0.08] py-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-center text-xs text-gray-500 sm:text-left">
-            © {anio}{" "}
-            <span className="font-black text-gray-300">
-              FutZone
-            </span>
-            . Todos los derechos reservados.
-          </p>
+      {/* Modal */}
+      {modalAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-7 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
 
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-            Hecho para los amantes del fútbol
-            <span className="text-green-400">⚽</span>
+            {/* Botón Cerrar */}
+            <button
+              onClick={() => setModalAbierto(false)}
+              className="absolute right-5 top-5 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Cabecera del Modal */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-600">
+                <Trophy size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900">
+                  Vive la experiencia <span className="text-green-600">FutZone</span>
+                </h3>
+                <p className="text-xs font-semibold text-gray-400">
+                  Reserva, juega y compite
+                </p>
+              </div>
+            </div>
+
+            {/* Mensaje descriptivo */}
+            <div className="mt-5 space-y-3 text-xs leading-relaxed text-gray-600">
+              <p>
+                En <strong>FutZone</strong> transformamos la forma de reservar tus sintéticas en Popayán. Encuentra las mejores canchas disponibles, consulta horarios en tiempo real y organiza tus torneos o encuentros en segundos.
+              </p>
+
+              <div className="rounded-2xl border border-green-200 bg-green-50/70 p-3.5 flex items-center gap-3 text-green-800">
+                <ShieldCheck size={22} className="shrink-0 text-green-600" />
+                <span className="font-semibold text-[11px]">
+                  Para gestionar reservas o crear tu cancha en el sistema debes contar con una cuenta activa.
+                </span>
+              </div>
+            </div>
+
+            {/* Acciones de Login / Registro */}
+            <div className="mt-6 space-y-2.5 pt-2 border-t border-gray-100">
+              <button
+                onClick={() => {
+                  setModalAbierto(false);
+                  router.push("/login");
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-green-600 py-3 text-xs font-bold text-white shadow-md shadow-green-600/20 hover:bg-green-700 transition cursor-pointer"
+              >
+                <LogIn size={16} />
+                Iniciar Sesión
+              </button>
+
+              <button
+                onClick={() => {
+                  setModalAbierto(false);
+                  router.push("/register");
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-gray-300 bg-gray-50 py-3 text-xs font-bold text-gray-700 hover:bg-white hover:border-gray-400 transition cursor-pointer"
+              >
+                <UserPlus size={16} />
+                ¿No tienes cuenta? Regístrate aquí
+              </button>
+            </div>
+
           </div>
         </div>
-      </div>
-    </footer>
+      )}
+    </>
   );
 }

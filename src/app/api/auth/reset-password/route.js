@@ -11,14 +11,18 @@ export async function POST(request) {
             );
         }
 
-        // Usamos http://localhost:8000
-        const respuestaDjango = await fetch("http://localhost:8000/api/usuarios/reset-password/", {
+        const djangoUrl = process.env.NEXT_PUBLIC_API_URL
+            ? `${process.env.NEXT_PUBLIC_API_URL}/usuarios/reset-password/`
+            : "http://127.0.0.1:8000/api/usuarios/reset-password/";
+
+        // Reenvío seguro del token y contraseña hacia Django
+        const respuestaDjango = await fetch(djangoUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                token: token,
+                token: token.trim(),
                 newPassword: newPassword,
             }),
         });
@@ -27,7 +31,7 @@ export async function POST(request) {
 
         if (!respuestaDjango.ok) {
             return NextResponse.json(
-                { message: data.message || "Error al procesar en Django." },
+                { message: data.message || "Error al restablecer la contraseña en Django." },
                 { status: respuestaDjango.status }
             );
         }
@@ -37,10 +41,9 @@ export async function POST(request) {
             { status: 200 }
         );
     } catch (error) {
-        // Imprime el error exacto en la terminal de VS Code donde corre Next.js
-        console.error("Error exacto conectando con Django:", error);
+        console.error("Error exacto conectando con el backend de Django:", error);
         return NextResponse.json(
-            { message: "No se pudo conectar con el servidor Django." },
+            { message: "No se pudo conectar con el servidor backend." },
             { status: 500 }
         );
     }
