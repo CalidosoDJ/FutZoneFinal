@@ -57,7 +57,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "id_rol",
         ]
 
-
 class RegistroUsuarioSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -71,30 +70,64 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
             'telefono',
         ]
 
+    def validate_email(self, value):
+        email_limpio = value.strip().lower()
+        if Usuarios.objects.filter(email__iexact=email_limpio).exists():
+            raise serializers.ValidationError('Este correo ya está registrado.')
+        return email_limpio
+
+    def validate_username(self, value):
+        username_limpio = value.strip()
+        if Usuarios.objects.filter(username__iexact=username_limpio).exists():
+            raise serializers.ValidationError('Este nombre de usuario ya está en uso.')
+        return username_limpio
+
     def create(self, validated_data):
         password = validated_data.pop('password')
 
         usuario = Usuarios.objects.create(
             id_rol_id=2,
             password_hash=make_password(password),
-            estado='activo',
+            estado='Activo',
             **validated_data
         )
 
         return usuario
+# class RegistroUsuarioSerializer(serializers.ModelSerializer):
+#     password = serializers.CharField(write_only=True)
 
+#     class Meta:
+#         model = Usuarios
+#         fields = [
+#             'nombre_completo',
+#             'username',
+#             'email',
+#             'password',
+#             'telefono',
+#         ]
+
+#     def create(self, validated_data):
+#         password = validated_data.pop('password')
+
+#         usuario = Usuarios.objects.create(
+#             id_rol_id=2,
+#             password_hash=make_password(password),
+#             estado='activo',
+#             **validated_data
+#         )
+
+#         return usuario
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email = data['email']
+        email = data['email'].strip().lower()
         password = data['password']
 
-        try:
-            usuario = Usuarios.objects.get(email=email)
-        except Usuarios.DoesNotExist:
+        usuario = Usuarios.objects.filter(email__iexact=email).first()
+        if not usuario:
             raise serializers.ValidationError(
                 'El correo o la contraseña son incorrectos.'
             )
@@ -104,13 +137,40 @@ class LoginSerializer(serializers.Serializer):
                 'El correo o la contraseña son incorrectos.'
             )
 
-        if usuario.estado != 'activo':
+        if (usuario.estado or '').strip().lower() != 'activo':
             raise serializers.ValidationError(
                 'El usuario se encuentra inactivo.'
             )
 
         data['usuario'] = usuario
         return data
+# class LoginSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
+#     password = serializers.CharField(write_only=True)
+
+#     def validate(self, data):
+#         email = data['email']
+#         password = data['password']
+
+#         try:
+#             usuario = Usuarios.objects.get(email=email)
+#         except Usuarios.DoesNotExist:
+#             raise serializers.ValidationError(
+#                 'El correo o la contraseña son incorrectos.'
+#             )
+
+#         if not check_password(password, usuario.password_hash):
+#             raise serializers.ValidationError(
+#                 'El correo o la contraseña son incorrectos.'
+#             )
+
+#         if usuario.estado != 'activo':
+#             raise serializers.ValidationError(
+#                 'El usuario se encuentra inactivo.'
+#             )
+
+#         data['usuario'] = usuario
+#         return data
 
 
 class ReservaSerializer(serializers.ModelSerializer):

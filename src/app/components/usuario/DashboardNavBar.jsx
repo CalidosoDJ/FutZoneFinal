@@ -91,6 +91,17 @@ export default function DashboardNavbar() {
     };
 
     const cerrarSesion = () => {
+        if (typeof window !== "undefined") {
+            window.speechSynthesis?.cancel();
+
+            // Eliminar cualquier historial o conversación del chat guardada en el navegador
+            Object.keys(localStorage).forEach((clave) => {
+                if (clave.startsWith("chat-futzone")) {
+                    localStorage.removeItem(clave);
+                }
+            });
+        }
+
         localStorage.removeItem("usuarioLogueado");
         router.replace("/login");
     };

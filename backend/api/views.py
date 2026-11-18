@@ -8,6 +8,9 @@ from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.views import APIView
+from django.http import StreamingHttpResponse
+from .chatbot_service import stream_mensaje_chatbot
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import (
@@ -21,6 +24,7 @@ from google.auth.transport import requests
 
 from django.core.files.storage import default_storage
 from .serializers import PublicacionSerializer
+
 
 from .models import (
     Canchas,
@@ -556,3 +560,27 @@ def google_auth(request):
             {'message': f'Error interno en Django: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+#chatbot
+class ChatbotAPIView(APIView):
+    def post(self, request):
+        mensaje = request.data.get('mensaje', '').strip()
+        id_usuario = request.data.get('id_usuario')
+        id_conversacion = request.data.get('id_conversacion')
+
+        if not mensaje:
+            return Response(
+                {"error": "El campo 'mensaje' es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        response = StreamingHttpResponse(
+            stream_mensaje_chatbot(
+                mensaje_usuario=mensaje,
+                id_usuario=id_usuario,
+                id_conversacion=id_conversacion
+            ),
+            content_type='application/x-ndjson'
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'
+        return response

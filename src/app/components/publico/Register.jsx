@@ -92,24 +92,31 @@ export default function RegisterForm() {
         setCargando(true);
 
         try {
-            const respuesta = await fetch("/api/auth/register", {
+            const respuesta = await fetch("http://127.0.0.1:8000/api/usuarios/registro/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    nombre_completo: nombre,
-                    username: usuario,
-                    email: correo,
+                    nombre_completo: nombre.trim(),
+                    username: usuario.trim(),
+                    email: correo.trim().toLowerCase(),
                     password: password,
-                    telefono: celular,
+                    telefono: celular.trim(),
                 }),
             });
 
             const datos = await respuesta.json();
 
             if (!respuesta.ok) {
-                alert(datos.message || "No se pudo registrar el usuario.");
+                const primerError =
+                    datos.email?.[0] ||
+                    datos.username?.[0] ||
+                    datos.password?.[0] ||
+                    datos.non_field_errors?.[0] ||
+                    datos.message ||
+                    "No se pudo registrar el usuario.";
+                alert(primerError);
                 return;
             }
 
