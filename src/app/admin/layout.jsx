@@ -14,7 +14,7 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     // 1. Verificar si existe la sesión en localStorage
-    const usuario = localStorage.getItem("usuarioLogueado");
+    const usuario = sessionStorage.getItem("usuarioLogueado");
 
     if (!usuario) {
       // 2. Redirigir al login y reemplazar la ruta actual en el historial

@@ -1,8 +1,21 @@
+
 "use client";
 
-import { MapPin, Navigation, Clock, Star } from "lucide-react";
-import Link from "next/link";
+import { useState, useRef } from "react";
+import {
+    MapPin,
+    Navigation,
+    Clock,
+    Star,
+    ExternalLink,
+    Calendar,
+    Trophy,
+    ShieldCheck,
+    Map,
+    LocateFixed,
+} from "lucide-react";
 
+import Link from "next/link";
 import "leaflet/dist/leaflet.css";
 
 import {
@@ -14,6 +27,7 @@ import {
 
 import L from "leaflet";
 
+// Configuración de los marcadores de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -26,7 +40,7 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function MapaCanchas() {
-    const posicion = [2.458279368072198, -76.59833580185445];
+    const mapRef = useRef(null);
 
     const canchas = [
         {
@@ -34,221 +48,148 @@ export default function MapaCanchas() {
             nombre: "Canchas Sintéticas El Cubo",
             posicion: [2.458279368072198, -76.59833580185445],
             tipo: "Fútbol 5, 6 y 7",
-            precio: "Desde $90.000",
+            precio: "$90.000 / hr",
             calificacion: 4.9,
+            horario: "6:00 AM - 11:00 PM",
+            estado: "Disponible",
+            ciudad: "Popayán, Cauca",
         },
     ];
 
+    const [canchaSeleccionada, setCanchaSeleccionada] = useState(
+        canchas[0]
+    );
+
+    const centrarEnCancha = (cancha) => {
+        setCanchaSeleccionada(cancha);
+
+        if (mapRef.current) {
+            mapRef.current.flyTo(cancha.posicion, 16, {
+                duration: 1.2,
+            });
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-slate-100">
+        <main className="min-h-screen bg-slate-50 text-slate-800">
 
             {/* HERO */}
-            <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-green-950 to-green-700 py-20 lg:py-28">
+            <section className="relative overflow-hidden border-b border-green-100 bg-white">
 
-                {/* EFECTOS DE FONDO */}
+                <div className="absolute -right-20 -top-32 h-96 w-96 rounded-full bg-green-100/70 blur-3xl" />
+                <div className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-blue-100/50 blur-3xl" />
 
-                <div className="absolute top-0 right-0 w-96 h-96 bg-green-500/20 rounded-full blur-3xl"></div>
+                <div className="relative mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20">
 
-                <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl"></div>
-
-
-                <div className="relative max-w-7xl mx-auto px-6">
-
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
-
-
-                        {/* CONTENIDO */}
+                    <div className="grid items-center gap-10 lg:grid-cols-[1.3fr_0.7fr]">
 
                         <div>
 
-                            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-md px-5 py-2 rounded-full">
-
-                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-
-                                <span className="text-green-100 font-semibold text-sm">
-
-                                    EXPLORA TUS CANCHAS
-
+                            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2">
+                                <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                                <span className="text-xs font-extrabold uppercase tracking-widest text-green-700">
+                                    Explora FutZone
                                 </span>
-
                             </div>
 
-
-                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white mt-7 leading-tight">
-
-                                Encuentra tu próxima
-
-                                <span className="block text-green-400">
-
-                                    cancha de fútbol.
-
+                            <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+                                Encuentra tu cancha,
+                                <span className="block text-green-600">
+                                    vive el fútbol.
                                 </span>
-
                             </h1>
 
-
-                            <p className="text-slate-300 text-lg md:text-xl mt-6 max-w-xl leading-8">
-
-                                Explora el mapa, conoce la ubicación de cada cancha y
-                                encuentra el escenario perfecto para tu próximo partido.
-
+                            <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+                                Descubre escenarios deportivos en Popayán,
+                                consulta su ubicación y encuentra el lugar
+                                ideal para tu próximo partido.
                             </p>
 
-
-                            {/* BOTONES */}
-
-                            <div className="flex flex-wrap gap-4 mt-9">
+                            <div className="mt-8 flex flex-wrap gap-3">
 
                                 <a
                                     href="#mapa"
-                                    className="bg-green-500 hover:bg-green-400 text-white px-7 py-4 rounded-2xl font-bold transition-all hover:scale-105 shadow-lg shadow-green-900/40"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-green-600/20 transition hover:-translate-y-1 hover:bg-green-700"
                                 >
-
-                                    🗺️ Ver mapa
-
+                                    <Map size={19} />
+                                    Explorar mapa
                                 </a>
 
-                                <a
-                                    href="https://www.google.com/maps"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md text-white px-7 py-4 rounded-2xl font-bold transition-all"
-                                >
-
-                                    📍 Abrir ubicación
-
-                                </a>
+                                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 font-semibold text-slate-600 shadow-sm">
+                                    <MapPin size={19} className="text-green-600" />
+                                    Popayán, Cauca
+                                </div>
 
                             </div>
 
                         </div>
 
-
-                        {/* TARJETA DEL MAPA */}
-
+                        {/* TARJETA INFORMATIVA */}
                         <div className="relative">
 
-                            <div className="absolute inset-0 bg-green-500/20 blur-3xl rounded-full"></div>
+                            <div className="rounded-3xl border border-green-100 bg-white p-7 shadow-xl shadow-green-900/5">
 
+                                <div className="flex items-center gap-4">
 
-                            <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-[32px] p-8 shadow-2xl">
-
-
-                                {/* HEADER TARJETA */}
-
-                                <div className="flex items-center justify-between">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-700">
+                                        <Trophy size={29} />
+                                    </div>
 
                                     <div>
-
-                                        <p className="text-green-300 text-sm font-bold tracking-wider">
-
-                                            UBICACIÓN DESTACADA
-
+                                        <p className="text-sm font-semibold text-slate-500">
+                                            Plataforma deportiva
                                         </p>
-
-                                        <h2 className="text-2xl md:text-3xl font-black text-white mt-2">
-
-                                            Canchas Sintéticas El Cubo
-
+                                        <h2 className="text-2xl font-black text-slate-900">
+                                            FUT<span className="text-green-600">ZONE</span>
                                         </h2>
-
-                                    </div>
-
-
-                                    <div className="w-14 h-14 rounded-2xl bg-green-500 flex items-center justify-center text-2xl shadow-lg">
-
-                                        ⚽
-
                                     </div>
 
                                 </div>
 
+                                <div className="my-6 h-px bg-slate-100" />
 
-                                {/* INFORMACIÓN */}
+                                <div className="space-y-5">
 
-                                <div className="grid grid-cols-2 gap-4 mt-8">
-
-                                    <div className="bg-black/20 border border-white/10 rounded-2xl p-5">
-
-                                        <p className="text-slate-400 text-sm">
-
-                                            Estado
-
-                                        </p>
-
-                                        <p className="text-white font-bold mt-1 flex items-center gap-2">
-
-                                            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-
-                                            Disponible
-
-                                        </p>
-
-                                    </div>
-
-
-                                    <div className="bg-black/20 border border-white/10 rounded-2xl p-5">
-
-                                        <p className="text-slate-400 text-sm">
-
-                                            Calificación
-
-                                        </p>
-
-                                        <p className="text-white font-bold mt-1">
-
-                                            ⭐ 4.9 / 5
-
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-
-                                {/* UBICACIÓN */}
-
-                                <div className="mt-5 bg-black/20 border border-white/10 rounded-2xl p-5">
-
-                                    <p className="text-slate-400 text-sm">
-
-                                        📍 Ubicación
-
-                                    </p>
-
-                                    <p className="text-white font-semibold mt-2">
-
-                                        Popayán, Cauca
-
-                                    </p>
-
-                                </div>
-
-
-                                {/* MINI MAPA DECORATIVO */}
-
-                                <div className="relative mt-6 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-green-700 to-emerald-900 border border-white/10">
-
-                                    <div className="absolute inset-0 opacity-20">
-
-                                        <div className="w-full h-full"
-                                            style={{
-                                                backgroundImage:
-                                                    "radial-gradient(circle, white 1px, transparent 1px)",
-                                                backgroundSize: "20px 20px"
-                                            }}
-                                        />
-
-                                    </div>
-
-                                    <div className="relative h-full flex items-center justify-center">
-
-                                        <div className="w-12 h-12 rounded-full bg-white text-green-700 flex items-center justify-center shadow-xl text-xl">
-
-                                            📍
-
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                                            <MapPin size={21} />
                                         </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800">
+                                                Ubicación precisa
+                                            </p>
+                                            <p className="text-sm text-slate-500">
+                                                Encuentra escenarios deportivos.
+                                            </p>
+                                        </div>
+                                    </div>
 
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-xl bg-green-50 p-3 text-green-600">
+                                            <Calendar size={21} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800">
+                                                Reserva tu espacio
+                                            </p>
+                                            <p className="text-sm text-slate-500">
+                                                Organiza tu próximo encuentro.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-xl bg-orange-50 p-3 text-orange-600">
+                                            <ShieldCheck size={21} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800">
+                                                Vive la experiencia
+                                            </p>
+                                            <p className="text-sm text-slate-500">
+                                                Todo empieza en una cancha.
+                                            </p>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -260,308 +201,288 @@ export default function MapaCanchas() {
                     </div>
 
                 </div>
-
             </section>
 
-            {/* CONTENIDO */}
-            <section  className="max-w-7xl mx-auto px-6 py-16">
+            {/* MAPA Y DETALLES */}
+            <section
+                id="mapa"
+                className="mx-auto max-w-7xl px-5 py-12 sm:px-8 md:py-16"
+            >
 
-                <div className="grid lg:grid-cols-3 gap-8">
+                {/* TITULO DE SECCION */}
+                <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+
+                    <div>
+                        <span className="text-xs font-black uppercase tracking-[0.2em] text-green-600">
+                            Encuentra tu escenario
+                        </span>
+
+                        <h2 className="mt-2 text-3xl font-black text-slate-900 sm:text-4xl">
+                            Mapa de <span className="text-green-600">canchas</span>
+                        </h2>
+
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-base">
+                            Selecciona un marcador para consultar la información
+                            del escenario deportivo.
+                        </p>
+                    </div>
+
+                    {/* LEYENDA */}
+                    <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                            <span className="text-xs font-bold text-slate-600">
+                                Disponible
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                            <span className="text-xs font-bold text-slate-600">
+                                Próxima reserva
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                            <span className="text-xs font-bold text-slate-600">
+                                Ocupada
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div className="grid items-start gap-7 lg:grid-cols-3">
 
                     {/* MAPA */}
-                    <div  id = "mapa"className="lg:col-span-2">
+                    <div className="space-y-4 lg:col-span-2">
 
-                        <div className="bg-white rounded-3xl shadow-lg overflow-hidden h-[500px]">
+                        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/5">
 
-                            <MapContainer
-                                center={posicion}
-                                zoom={16}
-                                scrollWheelZoom={true}
-                                className="h-full w-full"
-                            >
+                            <div className="relative h-[420px] overflow-hidden rounded-2xl sm:h-[550px]">
 
-                                <TileLayer
-                                    attribution="&copy; OpenStreetMap contributors"
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                />
+                                <MapContainer
+                                    center={canchaSeleccionada.posicion}
+                                    zoom={16}
+                                    scrollWheelZoom={true}
+                                    ref={mapRef}
+                                    className="z-0 h-full w-full"
+                                >
 
-                                {canchas.map((cancha) => (
-                                    <Marker
-                                        key={cancha.id}
-                                        position={cancha.posicion}
-                                    >
-                                        <Popup>
+                                    <TileLayer
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
 
-                                            <div className="w-56">
+                                    {canchas.map((cancha) => (
+                                        <Marker
+                                            key={cancha.id}
+                                            position={cancha.posicion}
+                                            eventHandlers={{
+                                                click: () => centrarEnCancha(cancha),
+                                            }}
+                                        >
+                                            <Popup>
+                                                <div className="min-w-[190px] p-1 text-slate-800">
 
-                                                <h3 className="font-bold text-lg text-green-700">
-                                                    {cancha.nombre}
-                                                </h3>
+                                                    <h3 className="text-base font-extrabold text-green-700">
+                                                        {cancha.nombre}
+                                                    </h3>
 
-                                                <p className="mt-2">
-                                                    ⚽ {cancha.tipo}
-                                                </p>
+                                                    <p className="mt-2 text-xs font-medium text-slate-500">
+                                                        {cancha.tipo}
+                                                    </p>
 
-                                                <p>
-                                                    ⭐ {cancha.calificacion}
-                                                </p>
+                                                    <p className="mt-2 text-sm font-bold text-slate-800">
+                                                        {cancha.precio}
+                                                    </p>
 
-                                                <p>
-                                                    💲 {cancha.precio}
-                                                </p>
+                                                    <Link
+                                                        href={`/reserva/${cancha.id}`}
+                                                        className="mt-3 block rounded-lg bg-green-600 px-3 py-2 text-center text-xs font-bold text-white no-underline transition hover:bg-green-700"
+                                                    >
+                                                        Reservar cancha
+                                                    </Link>
 
-                                                <Link
-                                                    href={`/reserva/${cancha.id}`}
-                                                    className="block mt-4 bg-green-600 hover:bg-green-700 !text-white text-center py-2 rounded-lg font-semibold no-underline"
-                                                >
-                                                    Reservar
-                                                </Link>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    ))}
 
-                                                <a
-                                                    href="https://www.google.com/maps/dir/?api=1&destination=2.4448,-76.6147"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex justify-center items-center w-full mt-4 bg-blue-600 hover:bg-blue-700 !text-white py-4 rounded-2xl font-bold no-underline transition"
-                                                >
-                                                    Cómo llegar
-                                                </a>
-
-                                            </div>
-
-                                        </Popup>
-                                    </Marker>
-                                ))}
-
-                            </MapContainer>
-
-
-                        </div>
-
-                        {/* LEYENDA */}
-
-
-
-
-                        {/* ENCABEZADO */}
-
-                        <div className="bg-gradient-to-r from-slate-50 to-green-50 px-8 py-6 border-b border-gray-100">
-
-                            <div className="flex items-center gap-4">
-
-                                <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center text-2xl">
-
-                                    📍
-
-                                </div>
-
-                                <div>
-
-                                    <h3 className="font-black text-2xl text-gray-800">
-
-                                        Estado de las canchas
-
-                                    </h3>
-
-                                    <p className="text-gray-500 mt-1">
-
-                                        Consulta la disponibilidad directamente en el mapa
-
-                                    </p>
-
-                                </div>
+                                </MapContainer>
 
                             </div>
 
                         </div>
 
+                        <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
 
-                        {/* ESTADOS */}
+                            <LocateFixed
+                                size={20}
+                                className="mt-0.5 shrink-0 text-blue-600"
+                            />
 
-                        <div className="p-6 grid md:grid-cols-3 gap-5">
-
-                            {/* DISPONIBLE */}
-
-                            <div className="group flex items-center gap-4 p-5 rounded-2xl bg-green-50 border border-green-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-
-                                <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-green-600 shadow-lg">
-
-                                    <span className="absolute w-full h-full rounded-full bg-green-400 animate-ping opacity-30"></span>
-
-                                    <span className="relative w-4 h-4 rounded-full bg-white"></span>
-
-                                </div>
-
-                                <div>
-
-                                    <h4 className="font-bold text-gray-800 text-lg">
-
-                                        Disponible
-
-                                    </h4>
-
-                                    <p className="text-sm text-gray-500">
-
-                                        Lista para reservar
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-                            {/* PRÓXIMA RESERVA */}
-
-                            <div className="group flex items-center gap-4 p-5 rounded-2xl bg-yellow-50 border border-yellow-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-
-                                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500 shadow-lg">
-
-                                    <span className="w-4 h-4 rounded-full bg-white"></span>
-
-                                </div>
-
-                                <div>
-
-                                    <h4 className="font-bold text-gray-800 text-lg">
-
-                                        Próxima reserva
-
-                                    </h4>
-
-                                    <p className="text-sm text-gray-500">
-
-                                        Disponible por poco tiempo
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-                            {/* OCUPADA */}
-
-                            <div className="group flex items-center gap-4 p-5 rounded-2xl bg-red-50 border border-red-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-
-                                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-600 shadow-lg">
-
-                                    <span className="w-4 h-4 rounded-full bg-white"></span>
-
-                                </div>
-
-                                <div>
-
-                                    <h4 className="font-bold text-gray-800 text-lg">
-
-                                        Ocupada
-
-                                    </h4>
-
-                                    <p className="text-sm text-gray-500">
-
-                                        Actualmente no disponible
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* PIE */}
-
-                        <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
-
-                            <p className="text-sm text-gray-500 flex items-center gap-2">
-
-                                <span className="text-green-600 font-bold">
-
-                                    ●
-
-                                </span>
-
-                                Los estados pueden actualizarse según las reservas realizadas.
-
+                            <p className="text-sm leading-6 text-blue-800">
+                                <strong>Explora el mapa:</strong> puedes
+                                desplazarte, acercar o alejar la vista y
+                                seleccionar los marcadores para consultar
+                                cada escenario.
                             </p>
 
                         </div>
 
                     </div>
 
-                    {/* PANEL DERECHO */}
-                    <div className="bg-white rounded-3xl shadow-lg p-8 h-fit">
+                    {/* PANEL DE INFORMACION */}
+                    <aside className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
 
-                        <h2 className="text-3xl font-black text-slate-800">
-                            Centro Deportivo El Cubo
-                        </h2>
+                        {/* ENCABEZADO */}
+                        <div className="border-b border-slate-100 p-6">
 
-                        <div className="flex items-center gap-2 mt-6">
+                            <div className="flex items-center justify-between gap-3">
 
-                            <Star
-                                className="text-yellow-500 fill-yellow-400"
-                                size={20}
-                            />
+                                <span className="text-xs font-black uppercase tracking-widest text-green-700">
+                                    Cancha seleccionada
+                                </span>
 
-                            <span className="font-semibold">
-                                4.9 / 5.0
-                            </span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700">
+                                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                                    {canchaSeleccionada.estado}
+                                </span>
 
-                        </div>
+                            </div>
 
-                        <div className="flex items-start gap-3 mt-6">
+                            <h3 className="mt-5 text-2xl font-black leading-tight text-slate-900">
+                                {canchaSeleccionada.nombre}
+                            </h3>
 
-                            <MapPin
-                                className="text-green-600"
-                                size={22}
-                            />
+                            <div className="mt-3 flex items-center gap-2">
 
-                            <span className="text-slate-600">
-                                Popayán, Cauca
-                            </span>
+                                <div className="flex items-center gap-1 text-amber-500">
+                                    <Star
+                                        size={17}
+                                        className="fill-amber-400"
+                                    />
+                                    <span className="font-extrabold text-slate-800">
+                                        {canchaSeleccionada.calificacion}
+                                    </span>
+                                </div>
 
-                        </div>
+                                <span className="text-slate-300">|</span>
 
-                        <div className="flex items-center gap-3 mt-6">
+                                <span className="text-xs font-semibold text-slate-500">
+                                    {canchaSeleccionada.tipo}
+                                </span>
 
-                            <Navigation
-                                className="text-green-600"
-                                size={22}
-                            />
-
-                            <span className="text-slate-600">
-                                Canchas de Fútbol 5, 6 y 7
-                            </span>
-
-                        </div>
-
-                        <div className="flex items-center gap-3 mt-6">
-
-                            <Clock
-                                className="text-green-600"
-                                size={22}
-                            />
-
-                            <span className="text-slate-600">
-                                6:00 AM - 11:00 PM
-                            </span>
+                            </div>
 
                         </div>
 
-                        <Link
-                            href="/canchas"
-                            className="block mt-10 w-full bg-green-600 hover:bg-green-700 text-center text-white py-4 rounded-2xl font-bold transition"
-                        >
-                            Ver todas las canchas
-                        </Link>
+                        {/* INFORMACION */}
+                        <div className="space-y-4 p-6">
 
-                    </div>
+                            <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4">
+                                <div className="rounded-xl bg-green-100 p-3 text-green-700">
+                                    <MapPin size={21} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-400">
+                                        Ubicación
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-slate-800">
+                                        {canchaSeleccionada.ciudad}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4">
+                                <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
+                                    <Clock size={21} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-400">
+                                        Horario de atención
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-slate-800">
+                                        {canchaSeleccionada.horario}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4">
+                                <div className="rounded-xl bg-orange-100 p-3 text-orange-600">
+                                    <Navigation size={21} />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-400">
+                                        Precio por hora
+                                    </p>
+                                    <p className="mt-1 text-xl font-black text-green-700">
+                                        {canchaSeleccionada.precio}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* ACCIONES */}
+                            <div className="space-y-3 pt-3">
+
+                                <Link
+                                    href={`/reserva/${canchaSeleccionada.id}`}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-4 font-black text-white shadow-lg shadow-green-600/20 transition hover:-translate-y-0.5 hover:bg-green-700"
+                                >
+                                    <Calendar size={19} />
+                                    Reservar esta cancha
+                                </Link>
+
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${canchaSeleccionada.posicion[0]},${canchaSeleccionada.posicion[1]}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                >
+                                    <ExternalLink size={18} />
+                                    Abrir en Google Maps
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </aside>
 
                 </div>
 
             </section>
 
-        </div>
+            {/* CIERRE */}
+            <section className="border-t border-green-100 bg-white">
+
+                <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 px-5 py-7 sm:px-8 md:flex-row md:items-center">
+
+                    <div>
+                        <p className="text-xl font-black tracking-wider text-slate-900">
+                            FUT<span className="text-green-600">ZONE</span>
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            Tu equipo. Tu cancha. Tu historia.
+                        </p>
+                    </div>
+
+                    <a
+                        href="#mapa"
+                        className="text-sm font-bold text-green-700 transition hover:text-green-900"
+                    >
+                        Volver al mapa ↑
+                    </a>
+
+                </div>
+
+            </section>
+
+        </main>
     );
 }

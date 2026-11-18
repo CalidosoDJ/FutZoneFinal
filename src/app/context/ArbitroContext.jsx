@@ -1,11 +1,11 @@
+
 "use client";
 
 import { createContext, useContext, useState } from "react";
 
-const ArbitroContext = createContext();
+const ArbitroContext = createContext(null);
 
 export function ArbitroProvider({ children }) {
-
   const [arbitro, setArbitro] = useState({
     nombre: "Carlos Pérez",
     correo: "carlos.perez@futzone.com",
@@ -16,8 +16,8 @@ export function ArbitroProvider({ children }) {
     calificacion: 4.9,
     ingreso: "15 Enero 2025",
     foto: "https://i.pravatar.cc/300?img=15",
+    disponible: true,
   });
-
 
   const [partidos, setPartidos] = useState([
     {
@@ -42,85 +42,79 @@ export function ArbitroProvider({ children }) {
     },
   ]);
 
-
   const [notificaciones, setNotificaciones] = useState([]);
-
   const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
 
+  // Cambiar disponibilidad del árbitro
+  const toggleDisponibilidad = () => {
+    setArbitro((anterior) => ({
+      ...anterior,
+      disponible: !anterior.disponible,
+    }));
+  };
 
   function finalizarPartido(id, resumen) {
+    const partido = partidos.find((p) => p.id === id);
 
-    setPartidos((partidosAnteriores) =>
-      partidosAnteriores.map((partido) =>
-        partido.id === id
-          ? {
-            ...partido,
-            estado: "Finalizado",
-            resumen,
-          }
-          : partido
+    setPartidos((anteriores) =>
+      anteriores.map((p) =>
+        p.id === id
+          ? { ...p, estado: "Finalizado", resumen }
+          : p
       )
     );
-
 
     setNotificaciones((anteriores) => [
       {
         id: Date.now(),
         icono: "📋",
         titulo: "Acta registrada",
-        mensaje: `El partido ${partidoSeleccionado?.local} vs ${partidoSeleccionado?.visitante} fue finalizado correctamente.`,
+        mensaje: `El partido ${partido?.local} vs ${partido?.visitante} fue finalizado correctamente.`,
         fecha: new Date().toLocaleString(),
         leida: false,
       },
       ...anteriores,
     ]);
 
-
     setPartidoSeleccionado(null);
   }
 
-
-  // ACTUALIZAR PERFIL DEL ÁRBITRO
-
   const actualizarArbitro = (nuevosDatos) => {
-
-    setArbitro(nuevosDatos);
-
+    setArbitro((anterior) => ({
+      ...anterior,
+      ...nuevosDatos,
+    }));
   };
 
-
   return (
-
     <ArbitroContext.Provider
       value={{
         arbitro,
         setArbitro,
         actualizarArbitro,
-
+        toggleDisponibilidad,
         partidos,
         setPartidos,
-
         partidoSeleccionado,
         setPartidoSeleccionado,
-
         notificaciones,
         setNotificaciones,
-
         finalizarPartido,
       }}
     >
-
       {children}
-
     </ArbitroContext.Provider>
-
   );
-
 }
 
-
 export function useArbitro() {
+  const context = useContext(ArbitroContext);
 
-  return useContext(ArbitroContext);
+  if (!context) {
+    throw new Error(
+      "useArbitro debe utilizarse dentro de ArbitroProvider"
+    );
+  }
 
+  return context;
 }

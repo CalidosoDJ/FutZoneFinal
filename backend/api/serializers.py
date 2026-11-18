@@ -13,7 +13,6 @@ from .models import Notificaciones
 from rest_framework import serializers
 from .models import Publicaciones
 
-
 class PublicacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Publicaciones
@@ -82,7 +81,22 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
         )
 
         return usuario
+from rest_framework import serializers
+from .models import Notificaciones
 
+class NotificacionesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificaciones
+        fields = [
+            'id_notificacion',
+            'id_usuario',
+            'titulo',
+            'mensaje',
+            'tipo',
+            'id_referencia',
+            'leido',
+            'fecha_envio',
+        ]
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -113,66 +127,86 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
+
 class ReservaSerializer(serializers.ModelSerializer):
     nombre_usuario = serializers.CharField(
-        source='id_usuario.nombre_completo',
+        source="id_usuario.nombre_completo",
         read_only=True
     )
+
     nombre_cancha = serializers.CharField(
-        source='id_cancha.nombre',
+        source="id_cancha.nombre",
         read_only=True
+    )
+
+    ESTADOS = [
+        "pendiente",
+        "confirmada",
+        "rechazada",
+        "en_curso",
+        "finalizada",
+        "cancelada",
+        "no_asistio",
+    ]
+
+    estado = serializers.ChoiceField(
+        choices=ESTADOS,
+        required=False
     )
 
     class Meta:
         model = Reservas
         fields = [
-            'id_reserva',
-            'id_usuario',
-            'nombre_usuario',
-            'id_cancha',
-            'nombre_cancha',
-            'fecha_reserva',
-            'hora_inicio',
-            'hora_fin',
-            'total',
-            'estado',
-            'fecha_creacion',
+            "id_reserva",
+            "id_usuario",
+            "nombre_usuario",
+            "id_cancha",
+            "nombre_cancha",
+            "fecha_reserva",
+            "hora_inicio",
+            "hora_fin",
+            "total",
+            "estado",
+            "fecha_creacion",
         ]
+
         read_only_fields = [
-            'id_reserva',
-            'nombre_usuario',
-            'nombre_cancha',
-            'total',
-            'estado',
-            'fecha_creacion',
+            "id_reserva",
+            "nombre_usuario",
+            "nombre_cancha",
+            "total",
+            "fecha_creacion",
         ]
 
     def validate(self, data):
         cancha = data.get(
-            'id_cancha',
-            getattr(self.instance, 'id_cancha', None)
+            "id_cancha",
+            getattr(self.instance, "id_cancha", None)
         )
+
         fecha = data.get(
-            'fecha_reserva',
-            getattr(self.instance, 'fecha_reserva', None)
+            "fecha_reserva",
+            getattr(self.instance, "fecha_reserva", None)
         )
+
         inicio = data.get(
-            'hora_inicio',
-            getattr(self.instance, 'hora_inicio', None)
+            "hora_inicio",
+            getattr(self.instance, "hora_inicio", None)
         )
+
         fin = data.get(
-            'hora_fin',
-            getattr(self.instance, 'hora_fin', None)
+            "hora_fin",
+            getattr(self.instance, "hora_fin", None)
         )
 
         if inicio and fin and inicio >= fin:
             raise serializers.ValidationError(
-                'La hora de inicio debe ser anterior a la hora de finalización.'
+                "La hora de inicio debe ser anterior a la hora final."
             )
 
         if fecha and fecha < timezone.localdate():
             raise serializers.ValidationError(
-                'No puedes reservar una fecha que ya pasó.'
+                "No puedes reservar una fecha que ya pasó."
             )
 
         if cancha and fecha and inicio and fin:
@@ -182,7 +216,12 @@ class ReservaSerializer(serializers.ModelSerializer):
                 hora_inicio__lt=fin,
                 hora_fin__gt=inicio,
             ).exclude(
-                estado__in=['cancelada', 'cancelado', 'anulada']
+                estado__in=[
+                    "cancelada",
+                    "rechazada",
+                    "cancelado",
+                    "anulada",
+                ]
             )
 
             if self.instance:
@@ -192,33 +231,31 @@ class ReservaSerializer(serializers.ModelSerializer):
 
             if reservas_existentes.exists():
                 raise serializers.ValidationError(
-                    'La cancha ya tiene una reserva en ese horario.'
+                    "La cancha ya tiene una reserva en ese horario."
                 )
 
         return data
 
     def create(self, validated_data):
-        cancha = validated_data['id_cancha']
-        inicio = validated_data['hora_inicio']
-        fin = validated_data['hora_fin']
+        cancha = validated_data["id_cancha"]
+        inicio = validated_data["hora_inicio"]
+        fin = validated_data["hora_fin"]
 
         inicio_minutos = inicio.hour * 60 + inicio.minute
         fin_minutos = fin.hour * 60 + fin.minute
-        duracion_horas = Decimal(
-            fin_minutos - inicio_minutos
-        ) / Decimal('60')
 
-        total = cancha.precio_hora * duracion_horas
+        duracion = Decimal(
+            fin_minutos - inicio_minutos
+        ) / Decimal("60")
+
+        total = Decimal(str(cancha.precio_hora)) * duracion
 
         return Reservas.objects.create(
             **validated_data,
             total=total,
-            estado='pendiente',
+            estado="pendiente",
             fecha_creacion=timezone.now()
         )
-
-
-
 
 
 class PagoSerializer(serializers.ModelSerializer):
@@ -257,39 +294,46 @@ class PagoSerializer(serializers.ModelSerializer):
             "nombre_usuario",
             "nombre_cancha",
             "fecha_reserva",
+            "monto",
+            "estado",
             "fecha_pago",
         ]
 
     def validate(self, data):
-        reserva = data.get(
-            "id_reserva",
-            getattr(self.instance, "id_reserva", None)
-        )
-
-        metodo = data.get(
-            "metodo_pago",
-            getattr(self.instance, "metodo_pago", None)
-        )
+        reserva = data.get("id_reserva")
 
         if reserva is None:
-            raise serializers.ValidationError(
-                {"id_reserva": "Debes seleccionar una reserva."}
-            )
+            raise serializers.ValidationError({
+                "id_reserva": "Debes seleccionar una reserva."
+            })
+
+        metodo = data.get("metodo_pago")
 
         if metodo not in ["Efectivo", "Nequi"]:
-            raise serializers.ValidationError(
-                {"metodo_pago": "El método debe ser Efectivo o Nequi."}
+            raise serializers.ValidationError({
+                "metodo_pago": "Selecciona Efectivo o Nequi."
+            })
+
+        # Evitar registrar otro pago mientras exista uno
+        # pendiente o aprobado para la misma reserva.
+        pago_existente = Pagos.objects.filter(
+            id_reserva=reserva,
+            estado__in=["Pendiente", "Pagado"]
+        )
+
+        if self.instance:
+            pago_existente = pago_existente.exclude(
+                id_pago=self.instance.id_pago
             )
 
-        # El monto se obtiene de la reserva para evitar
-        # que el frontend envíe un valor arbitrario.
-        if self.instance is None:
-            data["monto"] = reserva.total
+        if pago_existente.exists():
+            raise serializers.ValidationError({
+                "id_reserva": "Esta reserva ya tiene un pago pendiente o aprobado."
+            })
+
+        data["monto"] = reserva.total
 
         return data
-
-
-
 
 class NotificacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -313,3 +357,45 @@ class NotificacionSerializer(serializers.ModelSerializer):
             "id_referencia",
             "fecha_envio",
         ]
+from .models import CommunityMessage
+
+class CommunityMessageSerializer(serializers.ModelSerializer):
+    autor_id = serializers.IntegerField(source='id_usuario.id_usuario', read_only=True)
+    autor_nombre = serializers.CharField(source='id_usuario.nombre_completo', read_only=True)
+    autor_username = serializers.CharField(source='id_usuario.username', read_only=True)
+    autor_foto = serializers.CharField(source='id_usuario.foto_url', read_only=True)
+
+    class Meta:
+        model = CommunityMessage
+        fields = [
+            'id_mensaje', 
+            'autor_id', 
+            'autor_nombre', 
+            'autor_username',
+            'autor_foto', 
+            'content', 
+            'category', 
+            'match_date', 
+            'spots_needed', 
+            'created_at'
+        ]
+        read_only_fields = ['id_mensaje', 'autor_id', 'created_at']
+from .models import MensajePrivado
+
+class MensajePrivadoSerializer(serializers.ModelSerializer):
+    remitente_nombre = serializers.CharField(source="id_remitente.nombre_completo", read_only=True)
+    destinatario_nombre = serializers.CharField(source="id_destinatario.nombre_completo", read_only=True)
+
+    class Meta:
+        model = MensajePrivado
+        fields = [
+            "id_mensaje_privado",
+            "id_remitente",
+            "id_destinatario",
+            "remitente_nombre",
+            "destinatario_nombre",
+            "contenido",
+            "fecha_envio",
+            "leido",
+        ]
+        read_only_fields = ["id_remitente", "fecha_envio", "leido"]

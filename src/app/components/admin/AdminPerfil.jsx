@@ -19,7 +19,7 @@ export default function AdminPerfil() {
     useEffect(() => {
 
         const usuarioGuardado =
-            localStorage.getItem("usuarioLogueado");
+            sessionStorage.getItem("usuarioLogueado");
 
         if (usuarioGuardado) {
 

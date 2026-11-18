@@ -72,7 +72,7 @@ export default function ConfiguracionPage() {
         }
 
         const usuarioLogueado = JSON.parse(
-            localStorage.getItem("usuarioLogueado")
+            sessionStorage.getItem("usuarioLogueado")
         );
 
         if (!usuarioLogueado) {

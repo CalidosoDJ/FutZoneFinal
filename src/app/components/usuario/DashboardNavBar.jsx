@@ -32,7 +32,7 @@ export default function DashboardNavbar() {
 
     useEffect(() => {
         try {
-            const datosUsuario = localStorage.getItem("usuarioLogueado");
+            const datosUsuario = sessionStorage.getItem("usuarioLogueado");
 
             if (!datosUsuario) {
                 router.replace("/login");

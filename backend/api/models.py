@@ -1,12 +1,4 @@
-﻿# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
-from django.db import models
-
+﻿from django.db import models
 
 class ArbitroPartidoEventos(models.Model):
     id_evento = models.AutoField(primary_key=True)
@@ -55,24 +47,12 @@ class ArbitroPartidos(models.Model):
 
 class Canchas(models.Model):
     id_cancha = models.AutoField(primary_key=True)
-    id_sede = models.ForeignKey(
-        'Sede',
-        models.DO_NOTHING,
-        db_column='id_sede'
-    )
-    id_tipo = models.ForeignKey(
-        'TiposCancha',
-        models.DO_NOTHING,
-        db_column='id_tipo'
-    )
+    id_sede = models.ForeignKey('Sede', models.DO_NOTHING, db_column='id_sede')
+    id_tipo = models.ForeignKey('TiposCancha', models.DO_NOTHING, db_column='id_tipo')
     nombre = models.CharField(max_length=100)
     precio_hora = models.DecimalField(max_digits=10, decimal_places=2)
     estado = models.CharField(max_length=13, blank=True, null=True)
-    imagen_url = models.CharField(
-        max_length=500,
-        blank=True,
-        null=True
-    )
+    imagen_url = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -116,6 +96,8 @@ class ChatbotMensajes(models.Model):
         db_table = 'chatbot_mensajes'
 
 
+from django.db import models
+
 class Notificaciones(models.Model):
     id_notificacion = models.AutoField(primary_key=True)
     id_usuario = models.ForeignKey('Usuarios', models.DO_NOTHING, db_column='id_usuario')
@@ -123,8 +105,8 @@ class Notificaciones(models.Model):
     mensaje = models.TextField()
     tipo = models.CharField(max_length=12, blank=True, null=True)
     id_referencia = models.IntegerField(blank=True, null=True)
-    leido = models.IntegerField(blank=True, null=True)
-    fecha_envio = models.DateTimeField(blank=True, null=True)
+    leido = models.IntegerField(blank=True, null=True, default=0)  # 0: No leída, 1: Leída
+    fecha_envio = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -182,7 +164,7 @@ class Reservas(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=10, blank=True, null=True)
+    estado = models.CharField(max_length=20, blank=True, null=True, default='pendiente')
     fecha_creacion = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -294,3 +276,74 @@ class Usuarios(models.Model):
         managed = False
         db_table = 'usuarios'
 
+
+class SesionesUsuario(models.Model):
+    id_sesion = models.AutoField(primary_key=True)
+    id_usuario = models.ForeignKey(
+        Usuarios,
+        models.CASCADE,
+        db_column="id_usuario",
+        related_name="sesiones"
+    )
+    token_hash = models.CharField(max_length=64, unique=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_expiracion = models.DateTimeField()
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        managed = True
+        db_table = "sesiones_usuario"
+
+
+class CommunityMessage(models.Model):
+    CATEGORY_CHOICES = [
+        ('GENERAL', 'General'),
+        ('BUSCO_JUGADOR', 'Busco Jugador'),
+        ('RETO_VS', 'Reto VS'),
+    ]
+
+    id_mensaje = models.AutoField(primary_key=True)
+    id_usuario = models.ForeignKey(
+        Usuarios,
+        on_delete=models.CASCADE,
+        db_column='id_usuario',
+        related_name='community_messages'
+    )
+    content = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='GENERAL')
+    match_date = models.CharField(max_length=100, blank=True, null=True)
+    spots_needed = models.PositiveIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'comunidad_mensajes'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.id_usuario.nombre_completo} ({self.category}): {self.content[:30]}"
+
+# En models.py de Django
+class MensajePrivado(models.Model):
+    id_mensaje_privado = models.AutoField(primary_key=True)
+    id_remitente = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_enviados")
+    id_destinatario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_recibidos")
+    contenido = models.TextField()
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "mensaje_privado"
+        ordering = ["fecha_envio"]
+
+class MensajePrivado(models.Model):
+    id_mensaje_privado = models.AutoField(primary_key=True)
+    id_remitente = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_enviados")
+    id_destinatario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_recibidos")
+    contenido = models.TextField()
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "mensaje_privado"
+        ordering = ["fecha_envio"]

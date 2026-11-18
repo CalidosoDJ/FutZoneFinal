@@ -1,38 +1,40 @@
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from django.conf import settings
-from django.conf.urls.static import static
 from .views import (
-    PagoViewSet,
-    ReservaViewSet,
     CanchaViewSet,
     SedeViewSet,
     UsuarioViewSet,
     LoginViewSet,
+    ReservaViewSet,
+    PagoViewSet,
     NotificacionViewSet,
     PublicacionViewSet,
-    asistente
+    asistente,
+    verificar_sesion,
+    cerrar_sesion,
+    comunidad_mensajes,
+    chat_privado,
 )
 
-# Primero creamos el router
+# Enrutador principal de Django REST Framework
 router = DefaultRouter()
+router.register(r"canchas", CanchaViewSet, basename="canchas")
+router.register(r"sedes", SedeViewSet, basename="sedes")
+router.register(r"usuarios", UsuarioViewSet, basename="usuarios")
+router.register(r"login", LoginViewSet, basename="login")
+router.register(r"reservas", ReservaViewSet, basename="reservas")
+router.register(r"pagos", PagoViewSet, basename="pagos")
+router.register(r"notificaciones", NotificacionViewSet, basename="notificaciones")
+router.register(r"publicaciones", PublicacionViewSet, basename="publicaciones")
 
-# Después registramos las rutas
-router.register("pagos", PagoViewSet, basename="pagos")
-router.register("reservas", ReservaViewSet, basename="reservas")
-router.register("canchas", CanchaViewSet, basename="canchas")
-router.register("sedes", SedeViewSet, basename="sedes")
-router.register("usuarios", UsuarioViewSet, basename="usuarios")
-router.register("login", LoginViewSet, basename="login")
-router.register( "notificaciones",  NotificacionViewSet, basename="notificaciones",)
-router.register(r"publicaciones",PublicacionViewSet,basename="publicaciones")
-
-# Finalmente, declaramos las URL
 urlpatterns = [
+    # Rutas generadas por los ViewSets (incluye /api/notificaciones/, /api/notificaciones/<pk>/leida/, etc.)
     path("", include(router.urls)),
-]
-urlpatterns = [
+
+    # Rutas personalizadas del sistema FutZone
     path("asistente/", asistente, name="asistente"),
-    path("", include(router.urls)),
+    path("verificar-sesion/", verificar_sesion, name="verificar_sesion"),
+    path("cerrar-sesion/", cerrar_sesion, name="cerrar_sesion"),
+    path("comunidad/", comunidad_mensajes, name="comunidad_mensajes"),
+    path("chat/<int:usuario_id>/", chat_privado, name="chat_privado"),
 ]

@@ -11,7 +11,7 @@ export default function BienvenidaBanner() {
 
     useEffect(() => {
         // 1. Obtener nombre del usuario logueado
-        const usuarioLogueado = localStorage.getItem("usuarioLogueado");
+        const usuarioLogueado = sessionStorage.getItem("usuarioLogueado");
         if (usuarioLogueado) {
             try {
                 const admin = JSON.parse(usuarioLogueado);

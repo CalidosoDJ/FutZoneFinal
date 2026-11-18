@@ -129,7 +129,7 @@ export default function ReservaCancha({ cancha }) {
 
         let usuarioLogueado;
         try {
-            usuarioLogueado = JSON.parse(localStorage.getItem("usuarioLogueado") || "null");
+            usuarioLogueado = JSON.parse(sessionStorage.getItem("usuarioLogueado") || "null");
         } catch {
             alert("No se pudo leer la sesión. Inicia sesión nuevamente.");
             router.push("/login");
@@ -152,7 +152,7 @@ export default function ReservaCancha({ cancha }) {
 
         // Convertir el rol a número
         const idRol = Number(rolUsuario);
-      
+
         console.log("Rol original:", usuarioLogueado.id_rol);
         console.log("Usuario conectado:", usuarioLogueado);
         console.log("Rol detectado:", idRol);
@@ -200,21 +200,46 @@ export default function ReservaCancha({ cancha }) {
                 }),
             });
 
-            const datos = await respuesta.json().catch(() => ({}));
+            const textoRespuesta = await respuesta.text();
+
+            let datos = {};
+
+            try {
+                datos = textoRespuesta ? JSON.parse(textoRespuesta) : {};
+            } catch {
+                datos = { respuesta: textoRespuesta };
+            }
+
+            console.log("ESTADO HTTP:", respuesta.status);
+            console.log("DATOS ENVIADOS:", {
+                id_usuario: usuarioLogueado.id_usuario,
+                id_cancha: cancha.id,
+                fecha_reserva: fecha,
+                hora_inicio: horaInicio,
+                hora_fin: horaFin,
+            });
+            console.log("RESPUESTA DJANGO:", datos);
 
             if (!respuesta.ok) {
+                console.error("ERROR AL REGISTRAR RESERVA:", datos);
+
                 const errores = Object.entries(datos)
                     .map(([campo, mensajes]) => {
                         const texto = Array.isArray(mensajes)
                             ? mensajes.join(", ")
-                            : typeof mensajes === "string"
-                                ? mensajes
-                                : JSON.stringify(mensajes);
+                            : typeof mensajes === "object"
+                                ? JSON.stringify(mensajes)
+                                : String(mensajes);
+
                         return `${campo}: ${texto}`;
                     })
-                    .join("\\n");
+                    .join("\n");
 
-                alert(errores || "No fue posible registrar la reserva. Verifica la fecha y el horario.");
+                alert(
+                    `Error HTTP ${respuesta.status}\n\n` +
+                    (errores || "Django no devolvió detalles del error.")
+                );
+
                 return;
             }
 

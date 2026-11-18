@@ -4,6 +4,8 @@ import ReservaCancha from "@/app/components/publico/ReservaCancha";
 
 export const dynamic = "force-dynamic";
 
+const API = "http://127.0.0.1:8000";
+
 export default async function Page({ params }) {
     const { id } = await params;
     const idCancha = Number(id);
@@ -14,12 +16,8 @@ export default async function Page({ params }) {
 
     try {
         const [respuestaCanchas, respuestaSedes] = await Promise.all([
-            fetch("http://127.0.0.1:8000/api/canchas/", {
-                cache: "no-store",
-            }),
-            fetch("http://127.0.0.1:8000/api/sedes/", {
-                cache: "no-store",
-            }),
+            fetch(`${API}/api/canchas/`, { cache: "no-store" }),
+            fetch(`${API}/api/sedes/`, { cache: "no-store" }),
         ]);
 
         if (!respuestaCanchas.ok || !respuestaSedes.ok) {
@@ -52,6 +50,18 @@ export default async function Page({ params }) {
                 Number(item.id_sede) === Number(datosCancha.id_sede)
         );
 
+        // Utilizar el mismo campo de imagen de ListaCanchas.jsx
+        const rutaImagen =
+            datosCancha.imagen_url || datosCancha.imagen || "";
+
+        const imagen = rutaImagen
+            ? rutaImagen.startsWith("http")
+                ? rutaImagen
+                : `${API}/media/${rutaImagen
+                    .replace(/^\/?media\//, "")
+                    .replace(/^\//, "")}`
+            : "/images/cancha1.jpg";
+
         const cancha = {
             id: Number(datosCancha.id_cancha),
             nombre: datosCancha.nombre,
@@ -61,7 +71,7 @@ export default async function Page({ params }) {
                 ? `${sede.direccion}, ${sede.ciudad}, ${sede.departamento}`
                 : "Ubicación no disponible",
             telefono: sede?.telefono || "",
-            imagen: datosCancha.imagen || "/images/cancha1.jpg",
+            imagen,
             calificacion: datosCancha.calificacion ?? null,
             descripcion:
                 datosCancha.descripcion ||
@@ -74,10 +84,15 @@ export default async function Page({ params }) {
             id_tipo: datosCancha.id_tipo,
         };
 
+        console.log("CANCHA SELECCIONADA:", {
+            id: cancha.id,
+            nombre: cancha.nombre,
+            imagen: cancha.imagen,
+        });
+
         return <ReservaCancha cancha={cancha} />;
     } catch (error) {
         console.error("Error al cargar la cancha desde Django:", error);
-
         throw error;
     }
 }

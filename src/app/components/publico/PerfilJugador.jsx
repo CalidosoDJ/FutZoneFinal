@@ -1,32 +1,26 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
-  ArrowDownRight,
   ArrowRight,
-  ArrowUpRight,
   Award,
   Bell,
   CalendarDays,
   Camera,
   Check,
   CheckCircle2,
-  ChevronRight,
   Clock3,
   Edit3,
   Flag,
   Goal,
   LoaderCircle,
   MapPin,
-  Medal,
   Pencil,
   Save,
   ShieldCheck,
   Sparkles,
-  Star,
   Target,
   Trophy,
   UserRound,
@@ -38,12 +32,7 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
-const DEPORTES = [
-  "Fútbol 5",
-  "Fútbol 8",
-  "Fútbol 11",
-  "Fútbol sala",
-];
+const DEPORTES = ["Fútbol 5", "Fútbol 8", "Fútbol 11", "Fútbol sala"];
 
 const POSICIONES = [
   "Portero",
@@ -63,6 +52,13 @@ const ESTILOS = [
   "Equilibrado",
 ];
 
+const PERFIL_DEPORTIVO_INICIAL = {
+  deporte: "Fútbol 5",
+  posicion: "No definida",
+  estilo: "Equilibrado",
+  objetivo: "",
+};
+
 function leerJSON(valor, respaldo = null) {
   try {
     return valor ? JSON.parse(valor) : respaldo;
@@ -81,6 +77,14 @@ function obtenerId(usuario) {
   );
 }
 
+function obtenerRol(usuario) {
+  if (!usuario) return null;
+  const rol = usuario.id_rol;
+  if (rol === null || rol === undefined || rol === "") return null;
+  const idRol = Number(rol);
+  return Number.isInteger(idRol) ? idRol : null;
+}
+
 function normalizarTexto(valor) {
   return String(valor ?? "").trim().toLowerCase();
 }
@@ -94,7 +98,6 @@ function fechaValida(fecha) {
 function formatearFecha(fecha, opciones = {}) {
   const date = fechaValida(fecha);
   if (!date) return "Fecha por confirmar";
-
   return new Intl.DateTimeFormat("es-CO", {
     day: "numeric",
     month: "short",
@@ -110,12 +113,10 @@ function formatearHora(hora) {
 
 function estadoReserva(estado) {
   const valor = normalizarTexto(estado);
-
   if (valor.includes("cancel")) return "cancelada";
   if (valor.includes("complet")) return "completada";
   if (valor.includes("confirm")) return "confirmada";
   if (valor.includes("pend")) return "pendiente";
-
   return "otro";
 }
 
@@ -129,20 +130,6 @@ function obtenerIdCancha(reserva) {
     return cancha.id_cancha ?? cancha.id ?? cancha.pk ?? null;
   }
   return cancha ?? null;
-}
-
-function obtenerNombreCancha(reserva) {
-  const cancha = reserva?.id_cancha ?? reserva?.cancha;
-
-  if (typeof cancha === "object" && cancha !== null) {
-    return cancha.nombre ?? cancha.nombre_cancha ?? "Cancha reservada";
-  }
-
-  return (
-    reserva?.nombre_cancha ??
-    reserva?.cancha_nombre ??
-    "Cancha reservada"
-  );
 }
 
 function perteneceAlUsuario(reserva, usuario) {
@@ -168,17 +155,19 @@ function perteneceAlUsuario(reserva, usuario) {
     reserva?.email_usuario ?? reserva?.usuario_email
   );
 
-  return Boolean(emailUsuario && emailReserva && emailUsuario === emailReserva);
+  return Boolean(
+    emailUsuario && emailReserva && emailUsuario === emailReserva
+  );
 }
 
-function iniciales(nombre) {
-  const palabras = String(nombre || "Jugador").trim().split(/\s+/);
-  return palabras
-    .slice(0, 2)
-    .map((palabra) => palabra[0] || "")
-    .join("")
-    .toUpperCase();
+function obtenerHeadersAutorizados(token) {
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 }
+
+/* TARJETAS DE ESTADÍSTICAS */
 
 function TarjetaEstadistica({
   icono: Icono,
@@ -188,45 +177,42 @@ function TarjetaEstadistica({
   color = "green",
 }) {
   const colores = {
-    green: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
-    blue: "bg-sky-400/10 text-sky-300 ring-sky-400/20",
-    amber: "bg-amber-400/10 text-amber-300 ring-amber-400/20",
-    purple: "bg-violet-400/10 text-violet-300 ring-violet-400/20",
+    green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+    blue: "bg-blue-50 text-blue-600 ring-blue-100",
+    amber: "bg-amber-50 text-amber-600 ring-amber-100",
+    purple: "bg-purple-50 text-purple-600 ring-purple-100",
   };
 
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111914] p-5 transition duration-300 hover:-translate-y-1 hover:border-emerald-400/30 hover:bg-[#152019]">
+    <article className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-100/40">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-gray-400">{titulo}</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{titulo}</p>
+          <p className="mt-2 text-3xl font-black tracking-tight text-slate-900">
             {valor}
           </p>
-          <p className="mt-2 text-xs leading-5 text-gray-500">
+          <p className="mt-1.5 text-xs text-slate-500">
             {descripcion}
           </p>
         </div>
 
         <div
-          className={`rounded-xl p-3 ring-1 ${colores[color] || colores.green}`}
+          className={`rounded-2xl p-3.5 ring-1 ${colores[color] || colores.green}`}
         >
-          <Icono size={21} />
+          <Icono size={22} />
         </div>
       </div>
-
-      <div className="pointer-events-none absolute -bottom-12 -right-8 h-28 w-28 rounded-full bg-emerald-400/[0.04] blur-2xl transition group-hover:bg-emerald-400/[0.10]" />
     </article>
   );
 }
 
 function EtiquetaEstado({ estado }) {
   const estilos = {
-    confirmada:
-      "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-    pendiente: "border-amber-400/20 bg-amber-400/10 text-amber-300",
-    completada: "border-sky-400/20 bg-sky-400/10 text-sky-300",
-    cancelada: "border-red-400/20 bg-red-400/10 text-red-300",
-    otro: "border-emerald-100/10 bg-white/5 text-gray-300",
+    confirmada: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    pendiente: "border-amber-200 bg-amber-50 text-amber-700",
+    completada: "border-blue-200 bg-blue-50 text-blue-700",
+    cancelada: "border-rose-200 bg-rose-50 text-rose-700",
+    otro: "border-slate-200 bg-slate-100 text-slate-600",
   };
 
   const etiquetas = {
@@ -239,7 +225,7 @@ function EtiquetaEstado({ estado }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
         estilos[estado] || estilos.otro
       }`}
     >
@@ -254,7 +240,8 @@ export default function PerfilJugador() {
   const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
-  const [guardando, setGuardando] = useState(false);
+  const [accesoDenegado, setAccesoDenegado] = useState(false);
+
   const [mensaje, setMensaje] = useState("");
   const [errorGuardado, setErrorGuardado] = useState("");
 
@@ -267,135 +254,120 @@ export default function PerfilJugador() {
     telefono: "",
   });
 
-  const [perfilDeportivo, setPerfilDeportivo] = useState({
-    deporte: "Fútbol 5",
-    posicion: "No definida",
-    estilo: "Equilibrado",
-    objetivo: "",
-  });
+  const [perfilDeportivo, setPerfilDeportivo] = useState(
+    PERFIL_DEPORTIVO_INICIAL
+  );
 
   const [fotoPerfil, setFotoPerfil] = useState("");
   const [archivoFoto, setArchivoFoto] = useState(null);
-  const [guardandoFoto, setGuardandoFoto] = useState(false);
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+
   const inputFotoRef = useRef(null);
+  const solicitudRef = useRef(0);
+  const usuarioIdRef = useRef(null);
 
   const idUsuario = obtenerId(usuario);
+  const rolUsuario = obtenerRol(usuario);
+
+  const mostrarMensaje = useCallback((texto, esError = false) => {
+    setMensaje(esError ? "" : texto);
+    setErrorGuardado(esError ? texto : "");
+
+    window.setTimeout(() => {
+      setMensaje("");
+      setErrorGuardado("");
+    }, 4500);
+  }, []);
 
   const cargarDatos = useCallback(async () => {
+    const numeroSolicitud = ++solicitudRef.current;
+    const sigueSiendoSolicitudActual = () =>
+      solicitudRef.current === numeroSolicitud;
+
     setCargando(true);
     setErrorCarga("");
+    setAccesoDenegado(false);
 
     try {
-      const sesion = leerJSON(
-        typeof window !== "undefined"
-          ? localStorage.getItem("usuarioLogueado")
-          : null,
+      const sesionLocal = leerJSON(
+        sessionStorage.getItem("usuarioLogueado"),
         null
       );
 
-      if (!sesion) {
+      const token = sessionStorage.getItem("tokenFutZone");
+
+      if (!sesionLocal || !obtenerId(sesionLocal) || !token) {
+        usuarioIdRef.current = null;
+        setUsuario(null);
+        setReservas([]);
+        setFotoPerfil("");
+        setArchivoFoto(null);
+        setPerfilDeportivo({ ...PERFIL_DEPORTIVO_INICIAL });
+
         setErrorCarga(
           "No encontramos una sesión activa. Inicia sesión para ver tu perfil."
         );
-        setUsuario(null);
-        setReservas([]);
         return;
       }
 
-      setUsuario(sesion);
+      const id = obtenerId(sesionLocal);
 
-      const id = obtenerId(sesion);
+      // Sincronizamos con sessionStorage y el backend
+      const actualizado = {
+        ...sesionLocal,
+        id_usuario: id,
+        id_rol: Number(sesionLocal.id_rol || 2),
+      };
+
+      usuarioIdRef.current = id;
+      setUsuario(actualizado);
 
       setFormulario({
-        nombre_completo: sesion.nombre_completo ?? sesion.nombre ?? "",
-        email: sesion.email ?? "",
-        telefono: sesion.telefono ?? "",
+        nombre_completo: actualizado.nombre_completo ?? actualizado.nombre ?? "",
+        email: actualizado.email ?? "",
+        telefono: actualizado.telefono ?? "",
       });
 
-      if (id != null) {
-        const fotoGuardada = localStorage.getItem(`fotoPerfil_${id}`);
-        setFotoPerfil(
-          fotoGuardada || sesion.foto_url || sesion.foto || ""
+      const fotoGuardada = sessionStorage.getItem(`fotoPerfil_${id}`);
+      setFotoPerfil(fotoGuardada || actualizado.foto_url || actualizado.foto || "");
+
+      const perfilGuardado = leerJSON(
+        sessionStorage.getItem(`perfilDeportivo_${id}`),
+        null
+      );
+      setPerfilDeportivo({
+        ...PERFIL_DEPORTIVO_INICIAL,
+        ...(perfilGuardado || {}),
+      });
+
+      const headers = obtenerHeadersAutorizados(token);
+
+      const respuestaReservas = await fetch(`${API_URL}/reservas/`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      });
+
+      if (sigueSiendoSolicitudActual() && respuestaReservas.ok) {
+        const datos = await respuestaReservas.json();
+        const lista = Array.isArray(datos)
+          ? datos
+          : datos?.results ?? datos?.reservas ?? [];
+        setReservas(
+          lista.filter((reserva) => perteneceAlUsuario(reserva, actualizado))
         );
-
-        const perfilGuardado = leerJSON(
-          localStorage.getItem(`perfilDeportivo_${id}`),
-          null
-        );
-
-        if (perfilGuardado) {
-          setPerfilDeportivo((anterior) => ({
-            ...anterior,
-            ...perfilGuardado,
-          }));
-        }
-
-        const solicitudes = await Promise.allSettled([
-          fetch(`${API_URL}/usuarios/${id}/`),
-          fetch(`${API_URL}/reservas/`),
-        ]);
-
-        const respuestaUsuario = solicitudes[0];
-        const respuestaReservas = solicitudes[1];
-
-        if (
-          respuestaUsuario.status === "fulfilled" &&
-          respuestaUsuario.value.ok
-        ) {
-          const datosUsuario = await respuestaUsuario.value.json();
-
-          setUsuario((anterior) => {
-            const actualizado = {
-              ...(anterior || sesion),
-              ...datosUsuario,
-            };
-
-            localStorage.setItem(
-              "usuarioLogueado",
-              JSON.stringify(actualizado)
-            );
-
-            return actualizado;
-          });
-
-          setFormulario({
-            nombre_completo:
-              datosUsuario.nombre_completo ??
-              sesion.nombre_completo ??
-              sesion.nombre ??
-              "",
-            email: datosUsuario.email ?? sesion.email ?? "",
-            telefono: datosUsuario.telefono ?? sesion.telefono ?? "",
-          });
-
-          if (datosUsuario.foto_url || datosUsuario.foto) {
-            setFotoPerfil(datosUsuario.foto_url || datosUsuario.foto);
-          }
-        }
-
-        if (
-          respuestaReservas.status === "fulfilled" &&
-          respuestaReservas.value.ok
-        ) {
-          const datos = await respuestaReservas.value.json();
-          const lista = Array.isArray(datos)
-            ? datos
-            : datos?.results ?? datos?.reservas ?? [];
-
-          setReservas(lista.filter((reserva) => perteneceAlUsuario(reserva, sesion)));
-        } else {
-          setReservas([]);
-        }
-      } else {
-        setReservas([]);
       }
     } catch (error) {
       console.error("Error cargando el perfil:", error);
-      setErrorCarga(
-        "No fue posible cargar toda la información. Comprueba que Django esté funcionando."
-      );
+      if (sigueSiendoSolicitudActual()) {
+        setErrorCarga(
+          "No fue posible cargar la información. Comprueba que Django esté funcionando."
+        );
+      }
     } finally {
-      setCargando(false);
+      if (sigueSiendoSolicitudActual()) {
+        setCargando(false);
+      }
     }
   }, []);
 
@@ -415,9 +387,7 @@ export default function PerfilJugador() {
   const reservasActivas = useMemo(
     () =>
       reservas.filter((reserva) =>
-        ["confirmada", "pendiente"].includes(
-          estadoReserva(reserva.estado)
-        )
+        ["confirmada", "pendiente"].includes(estadoReserva(reserva.estado))
       ),
     [reservas]
   );
@@ -432,75 +402,39 @@ export default function PerfilJugador() {
 
   const canchasVisitadas = useMemo(() => {
     const ids = new Set();
-
     reservasCompletadas.forEach((reserva) => {
       const id = obtenerIdCancha(reserva);
       if (id != null) ids.add(String(id));
     });
-
     return ids.size;
   }, [reservasCompletadas]);
 
   const proximaReserva = useMemo(() => {
     const ahora = new Date();
-
-    return reservas
-      .filter((reserva) => {
-        const estado = estadoReserva(reserva.estado);
-        const fecha = fechaValida(obtenerFechaReserva(reserva));
-
-        if (!fecha || fecha < ahora) return false;
-
-        return estado === "confirmada" || estado === "pendiente";
-      })
-      .sort((a, b) => {
-        const fechaA = fechaValida(obtenerFechaReserva(a)) || new Date(0);
-        const fechaB = fechaValida(obtenerFechaReserva(b)) || new Date(0);
-
-        if (fechaA.getTime() !== fechaB.getTime()) {
-          return fechaA - fechaB;
-        }
-
-        return String(a.hora_inicio || "").localeCompare(
-          String(b.hora_inicio || "")
-        );
-      })[0] || null;
-  }, [reservas]);
-
-  const fechaRegistro =
-    usuario?.fecha_registro ??
-    usuario?.fecha_creacion ??
-    usuario?.created_at ??
-    null;
-
-  const anioRegistro = fechaValida(fechaRegistro)?.getFullYear() ?? null;
-
-  const porcentajeContacto = useMemo(() => {
-    const campos = [
-      Boolean(nombreJugador && nombreJugador !== "Jugador FutZone"),
-      Boolean(correoJugador),
-      Boolean(telefonoJugador),
-      Boolean(fotoPerfil),
-    ];
-
-    return Math.round(
-      (campos.filter(Boolean).length / campos.length) * 100
+    return (
+      reservas
+        .filter((reserva) => {
+          const estado = estadoReserva(reserva.estado);
+          const fecha = fechaValida(obtenerFechaReserva(reserva));
+          if (!fecha || fecha < ahora) return false;
+          return estado === "confirmada" || estado === "pendiente";
+        })
+        .sort((a, b) => {
+          const fechaA = fechaValida(obtenerFechaReserva(a)) || new Date(0);
+          const fechaB = fechaValida(obtenerFechaReserva(b)) || new Date(0);
+          if (fechaA.getTime() !== fechaB.getTime()) return fechaA - fechaB;
+          return String(a.hora_inicio || "").localeCompare(
+            String(b.hora_inicio || "")
+          );
+        })[0] || null
     );
-  }, [nombreJugador, correoJugador, telefonoJugador, fotoPerfil]);
-
-  const mostrarMensaje = (texto, esError = false) => {
-    setMensaje(esError ? "" : texto);
-    setErrorGuardado(esError ? texto : "");
-    window.setTimeout(() => {
-      setMensaje("");
-      setErrorGuardado("");
-    }, 4500);
-  };
+  }, [reservas]);
 
   const guardarPerfil = async (evento) => {
     evento.preventDefault();
+    const idActual = obtenerId(usuario);
 
-    if (!idUsuario) {
+    if (!idActual) {
       mostrarMensaje("No pudimos identificar tu usuario.", true);
       return;
     }
@@ -510,171 +444,84 @@ export default function PerfilJugador() {
       return;
     }
 
-    setGuardando(true);
+    setGuardandoPerfil(true);
 
     try {
-      const respuesta = await fetch(
-        `${API_URL}/usuarios/${idUsuario}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            nombre_completo: formulario.nombre_completo.trim(),
-            email: formulario.email.trim(),
-            telefono: formulario.telefono.trim(),
-          }),
-        }
-      );
+      const token = sessionStorage.getItem("tokenFutZone");
+      const respuesta = await fetch(`${API_URL}/usuarios/${idActual}/`, {
+        method: "PATCH",
+        headers: obtenerHeadersAutorizados(token),
+        body: JSON.stringify({
+          nombre_completo: formulario.nombre_completo.trim(),
+          email: formulario.email.trim(),
+          telefono: formulario.telefono.trim(),
+        }),
+      });
 
       if (!respuesta.ok) {
-        const detalle = await respuesta.text();
-        console.error("Respuesta de Django:", detalle);
-
-        throw new Error(
-          respuesta.status === 404
-            ? "No encontramos el usuario en Django."
-            : respuesta.status === 400
-            ? "Revisa los datos ingresados; el servidor los rechazó."
-            : "No se pudo actualizar el perfil."
-        );
+        throw new Error("No se pudo actualizar el perfil en el servidor.");
       }
 
-      let datosActualizados = {};
-      try {
-        datosActualizados = await respuesta.json();
-      } catch {
-        // Algunos endpoints PATCH pueden responder sin contenido.
-      }
-
+      const datosActualizados = await respuesta.json().catch(() => ({}));
       const actualizado = {
         ...usuario,
         ...datosActualizados,
-        nombre_completo:
-          datosActualizados.nombre_completo ??
-          formulario.nombre_completo.trim(),
-        email: datosActualizados.email ?? formulario.email.trim(),
-        telefono: datosActualizados.telefono ?? formulario.telefono.trim(),
+        nombre_completo: formulario.nombre_completo.trim(),
+        email: formulario.email.trim(),
+        telefono: formulario.telefono.trim(),
       };
 
+      sessionStorage.setItem("usuarioLogueado", JSON.stringify(actualizado));
       setUsuario(actualizado);
-      localStorage.setItem("usuarioLogueado", JSON.stringify(actualizado));
-
-      setFormulario({
-        nombre_completo: actualizado.nombre_completo,
-        email: actualizado.email,
-        telefono: actualizado.telefono,
-      });
-
       setModalPerfil(false);
-      mostrarMensaje("Tu perfil se actualizó correctamente.");
+      mostrarMensaje("¡Perfil actualizado correctamente!");
     } catch (error) {
-      console.error("Error guardando perfil:", error);
-      mostrarMensaje(
-        error.message || "No pudimos guardar los cambios.",
-        true
-      );
+      console.error(error);
+      mostrarMensaje("No pudimos guardar los cambios.", true);
     } finally {
-      setGuardando(false);
+      setGuardandoPerfil(false);
     }
   };
 
   const seleccionarFoto = (evento) => {
     const archivo = evento.target.files?.[0];
     if (!archivo) return;
-
     if (!archivo.type.startsWith("image/")) {
       mostrarMensaje("Selecciona un archivo de imagen válido.", true);
-      evento.target.value = "";
       return;
     }
-
-    if (archivo.size > 5 * 1024 * 1024) {
-      mostrarMensaje("La imagen no puede superar los 5 MB.", true);
-      evento.target.value = "";
-      return;
-    }
-
     const lector = new FileReader();
-
     lector.onload = () => {
-      setArchivoFoto(String(lector.result || ""));
+      const resultado = String(lector.result || "");
+      sessionStorage.setItem(`fotoPerfil_${obtenerId(usuario)}`, resultado);
+      setFotoPerfil(resultado);
+      mostrarMensaje("Foto de perfil actualizada.");
     };
-
-    lector.onerror = () => {
-      mostrarMensaje("No pudimos leer la imagen.", true);
-    };
-
     lector.readAsDataURL(archivo);
-    evento.target.value = "";
-  };
-
-  const guardarFotoLocal = async () => {
-    if (!archivoFoto || !idUsuario) {
-      mostrarMensaje("Selecciona una imagen primero.", true);
-      return;
-    }
-
-    setGuardandoFoto(true);
-
-    try {
-      // Se conserva la lógica local del proyecto.
-      // Para sincronizar la foto entre dispositivos se necesita
-      // un endpoint Django de carga de archivos.
-      localStorage.setItem(`fotoPerfil_${idUsuario}`, archivoFoto);
-      setFotoPerfil(archivoFoto);
-      setArchivoFoto(null);
-      mostrarMensaje("Foto actualizada en este navegador.");
-    } catch (error) {
-      console.error(error);
-      mostrarMensaje(
-        "No pudimos guardar la foto. Prueba con una imagen más pequeña.",
-        true
-      );
-    } finally {
-      setGuardandoFoto(false);
-    }
   };
 
   const guardarPerfilDeportivo = (evento) => {
     evento.preventDefault();
+    const idActual = obtenerId(usuario);
+    if (!idActual) return;
 
-    if (!idUsuario) {
-      mostrarMensaje("No pudimos identificar tu usuario.", true);
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        `perfilDeportivo_${idUsuario}`,
-        JSON.stringify(perfilDeportivo)
-      );
-
-      setModalDeportivo(false);
-      mostrarMensaje(
-        "Preferencias deportivas guardadas en este navegador."
-      );
-    } catch (error) {
-      console.error(error);
-      mostrarMensaje("No pudimos guardar tus preferencias.", true);
-    }
+    sessionStorage.setItem(
+      `perfilDeportivo_${idActual}`,
+      JSON.stringify(perfilDeportivo)
+    );
+    setModalDeportivo(false);
+    mostrarMensaje("Preferencias deportivas guardadas con éxito.");
   };
 
   if (cargando) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-[#101a14] px-4 text-white">
-        <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10">
-            <LoaderCircle
-              className="animate-spin text-emerald-300"
-              size={30}
-            />
+      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-4 text-slate-800">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-200">
+            <LoaderCircle className="animate-spin text-emerald-600" size={30} />
           </div>
-          <h2 className="mt-5 text-lg font-bold">Preparando tu perfil</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Estamos organizando tu información deportiva...
-          </p>
+          <h2 className="text-lg font-bold text-slate-900">Preparando tu perfil</h2>
+          <p className="text-sm text-slate-500">Cargando tu información deportiva...</p>
         </div>
       </main>
     );
@@ -682,18 +529,18 @@ export default function PerfilJugador() {
 
   if (!usuario) {
     return (
-      <main className="flex min-h-[70vh] items-center justify-center bg-[#080d0a] px-5 text-white">
-        <div className="w-full max-w-md rounded-3xl border border-emerald-100/10 bg-[#1b2920] p-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-5 text-slate-800">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
             <UserRound size={30} />
           </div>
-          <h1 className="mt-5 text-2xl font-black">Tu perfil te espera</h1>
-          <p className="mt-3 text-sm leading-6 text-gray-400">
+          <h1 className="mt-5 text-2xl font-black text-slate-900">Tu perfil te espera</h1>
+          <p className="mt-3 text-sm leading-relaxed text-slate-500">
             {errorCarga || "Inicia sesión para consultar tu información."}
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-black transition hover:bg-emerald-400"
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3.5 font-bold text-white transition hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
           >
             Iniciar sesión <ArrowRight size={18} />
           </Link>
@@ -703,415 +550,145 @@ export default function PerfilJugador() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#080d0a] pb-16 text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-32 h-96 w-96 rounded-full bg-emerald-500/[0.06] blur-[120px]" />
-        <div className="absolute -right-40 top-[30rem] h-96 w-96 rounded-full bg-lime-400/[0.04] blur-[120px]" />
-      </div>
-
-      <div className="relative mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-        {/* Encabezado */}
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">
-              <Activity size={15} />
-              FutZone / Mi perfil
-            </div>
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-              Tu espacio, <span className="text-emerald-300">tu juego.</span>
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400 sm:text-base">
-              Administra tus datos, revisa tus reservas y mantén tu perfil
-              deportivo al día.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={cargarDatos}
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-100/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:border-emerald-400/30 hover:bg-white/[0.07]"
+    <main className="min-h-screen bg-slate-50 pb-16 text-slate-800">
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* MENSAJES DE ALERTA O ÉXITO */}
+        {(mensaje || errorGuardado) && (
+          <div
+            className={`p-4 rounded-2xl border text-sm font-medium flex items-center gap-3 animate-in fade-in ${
+              errorGuardado
+                ? "bg-rose-50 border-rose-200 text-rose-700"
+                : "bg-emerald-50 border-emerald-200 text-emerald-700"
+            }`}
           >
-            <Activity size={16} />
-            Actualizar datos
-          </button>
-        </div>
-
-        {errorCarga && (
-          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.07] p-4 text-sm text-amber-100">
-            <Bell size={18} className="mt-0.5 shrink-0" />
-            <div>
-              <p className="font-bold">Información parcialmente disponible</p>
-              <p className="mt-1 text-amber-100/70">{errorCarga}</p>
-            </div>
+            <Sparkles size={18} className="shrink-0" />
+            <span>{mensaje || errorGuardado}</span>
           </div>
         )}
 
-        {/* Hero del jugador */}
-        <section className="relative mb-6 overflow-hidden rounded-[28px] border border-emerald-300/15 bg-gradient-to-br from-[#263c2c] via-[#1b2b20] to-[#18251c]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(74,222,128,0.13),transparent_48%)]" />
-          <div className="absolute -right-16 -top-20 opacity-[0.06]">
-            <Trophy size={330} strokeWidth={0.8} />
-          </div>
-
-          <div className="relative grid gap-7 p-5 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center lg:p-10">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              <div className="relative mx-auto shrink-0 sm:mx-0">
-                <div className="h-28 w-28 overflow-hidden rounded-[30px] border-2 border-emerald-300/40 bg-[#1a2a1f] p-1 shadow-[0_0_45px_rgba(74,222,128,0.12)] sm:h-36 sm:w-36">
-                  <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[25px] bg-gradient-to-br from-emerald-300/20 to-transparent">
-                    {fotoPerfil || archivoFoto ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={archivoFoto || fotoPerfil}
-                        alt={`Foto de ${nombreJugador}`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-4xl font-black text-emerald-200">
-                        {iniciales(nombreJugador)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  aria-label="Cambiar foto de perfil"
-                  onClick={() => inputFotoRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-2xl border-4 border-[#121b15] bg-emerald-400 text-[#07100a] transition hover:scale-105"
-                >
-                  <Camera size={19} />
-                </button>
-
-                <input
-                  ref={inputFotoRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={seleccionarFoto}
-                />
-              </div>
-
-              <div className="min-w-0 flex-1 text-center sm:text-left">
-                <div className="mb-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-200">
-                    <ShieldCheck size={14} />
-                    Jugador FutZone
-                  </span>
-                  {anioRegistro && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
-                      <CalendarDays size={13} />
-                      Desde {anioRegistro}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="break-words text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
-                  {nombreJugador}
-                </h2>
-
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-gray-400 sm:justify-start">
-                  {correoJugador && (
-                    <span className="break-all">{correoJugador}</span>
-                  )}
-                  {telefonoJugador && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-1 w-1 rounded-full bg-emerald-400" />
-                      {telefonoJugador}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-5 flex flex-wrap justify-center gap-2 sm:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormulario({
-                        nombre_completo: nombreJugador,
-                        email: correoJugador,
-                        telefono: telefonoJugador,
-                      });
-                      setModalPerfil(true);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-extrabold text-[#08100a] transition hover:bg-emerald-300"
-                  >
-                    <Edit3 size={16} />
-                    Editar perfil
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => inputFotoRef.current?.click()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-100/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
-                  >
-                    <Camera size={16} />
-                    Cambiar foto
-                  </button>
-                </div>
-
-                {archivoFoto && (
-                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                    <span className="text-xs text-emerald-200">
-                      Nueva imagen seleccionada
-                    </span>
-                    <button
-                      type="button"
-                      onClick={guardarFotoLocal}
-                      disabled={guardandoFoto}
-                      className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-black disabled:opacity-60"
-                    >
-                      {guardandoFoto ? (
-                        <LoaderCircle size={14} className="animate-spin" />
-                      ) : (
-                        <Save size={14} />
-                      )}
-                      Guardar foto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setArchivoFoto(null)}
-                      className="rounded-lg border border-emerald-100/10 px-3 py-2 text-xs text-gray-300"
-                    >
-                      Descartar
-                    </button>
-                  </div>
+        {/* ENCABEZADO DEL PERFIL */}
+        <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+            <div className="relative group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-600/10 text-emerald-700 flex items-center justify-center text-3xl font-black overflow-hidden border-4 border-white shadow-md">
+                {fotoPerfil ? (
+                  <img src={fotoPerfil} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{nombreJugador.slice(0, 2).toUpperCase()}</span>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => inputFotoRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-slate-900 text-white p-2 rounded-full shadow-md hover:bg-emerald-600 transition cursor-pointer"
+                title="Cambiar foto"
+              >
+                <Camera size={16} />
+              </button>
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/*"
+                onChange={seleccionarFoto}
+                className="hidden"
+              />
             </div>
 
-            <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-5 lg:min-w-[230px]">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-gray-300">
-                  Perfil completado
-                </span>
-                <Sparkles size={17} className="text-emerald-300" />
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200">
+                <ShieldCheck size={14} /> Jugador Verificado FutZone
               </div>
-
-              <div className="mt-4 flex items-end gap-2">
-                <span className="text-4xl font-black">{porcentajeContacto}%</span>
-                <span className="pb-1 text-xs text-gray-500">de tus datos</span>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all duration-700"
-                  style={{ width: `${porcentajeContacto}%` }}
-                />
-              </div>
-
-              <p className="mt-3 text-xs leading-5 text-gray-500">
-                Completa tus datos y añade una foto para personalizar tu
-                experiencia.
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900">{nombreJugador}</h1>
+              <p className="text-sm text-slate-500">{correoJugador || "Sin correo registrado"} {telefonoJugador ? `• ${telefonoJugador}` : ""}</p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setModalPerfil(true)}
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-3 rounded-2xl transition shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <Edit3 size={15} /> Editar Perfil
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalDeportivo(true)}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs px-5 py-3 rounded-2xl border border-emerald-200 transition flex items-center gap-2 cursor-pointer"
+            >
+              <Target size={15} /> Preferencias Deportivas
+            </button>
           </div>
         </section>
 
-        {/* Accesos rápidos */}
-        <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Link
-            href="/canchas"
-            className="group flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-[#111914] p-4 transition hover:border-emerald-400/30 hover:bg-[#152019]"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300">
-              <Target size={23} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold">Reservar cancha</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Encuentra dónde jugar
-              </p>
-            </div>
-            <ArrowRight
-              size={18}
-              className="text-gray-500 transition group-hover:translate-x-1 group-hover:text-emerald-300"
-            />
-          </Link>
+        {/* TARJETAS DE ESTADÍSTICAS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <TarjetaEstadistica
+            icono={CalendarDays}
+            titulo="Reservas Activas"
+            valor={reservasActivas.length}
+            descripcion="Partidos programados próximamente"
+            color="green"
+          />
+          <TarjetaEstadistica
+            icono={Trophy}
+            titulo="Partidos Jugados"
+            valor={reservasCompletadas.length}
+            descripcion="Encuentros completados con éxito"
+            color="blue"
+          />
+          <TarjetaEstadistica
+            icono={MapPin}
+            titulo="Canchas Visitadas"
+            valor={canchasVisitadas}
+            descripcion="Diferentes sedes recorridas"
+            color="amber"
+          />
+          <TarjetaEstadistica
+            icono={Zap}
+            titulo="Nivel de Actividad"
+            valor={reservas.length > 5 ? "Alto" : "Activo"}
+            descripcion="Basado en tus reservas recientes"
+            color="purple"
+          />
+        </div>
 
-          <Link
-            href="/mis-reservas"
-            className="group flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-[#111914] p-4 transition hover:border-emerald-400/30 hover:bg-[#152019]"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300">
-              <CalendarDays size={23} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold">Mis reservas</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Consulta tus partidos
-              </p>
-            </div>
-            <ArrowRight
-              size={18}
-              className="text-gray-500 transition group-hover:translate-x-1 group-hover:text-emerald-300"
-            />
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setModalDeportivo(true)}
-            className="group flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-[#111914] p-4 text-left transition hover:border-emerald-400/30 hover:bg-[#152019]"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300">
-              <Trophy size={23} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold">Perfil deportivo</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Personaliza tu juego
-              </p>
-            </div>
-            <ArrowRight
-              size={18}
-              className="text-gray-500 transition group-hover:translate-x-1 group-hover:text-emerald-300"
-            />
-          </button>
-        </section>
-
-        {/* Estadísticas reales */}
-        <section className="mb-10">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        {/* PRÓXIMA RESERVA & PREFERENCIAS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Próximo partido */}
+          <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
-                Tu actividad
-              </p>
-              <h2 className="mt-2 text-2xl font-black">Tu juego en números</h2>
-            </div>
-            <span className="text-xs text-gray-500">
-              Según los datos de tus reservas
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <TarjetaEstadistica
-              icono={CalendarDays}
-              titulo="Reservas activas"
-              valor={reservasActivas.length}
-              descripcion="Pendientes o confirmadas"
-              color="green"
-            />
-            <TarjetaEstadistica
-              icono={CheckCircle2}
-              titulo="Reservas completadas"
-              valor={reservasCompletadas.length}
-              descripcion="Partidos registrados como completados"
-              color="blue"
-            />
-            <TarjetaEstadistica
-              icono={MapPin}
-              titulo="Canchas visitadas"
-              valor={canchasVisitadas}
-              descripcion="Canchas distintas con reservas completadas"
-              color="purple"
-            />
-            <TarjetaEstadistica
-              icono={Award}
-              titulo="Miembro desde"
-              valor={anioRegistro ?? "—"}
-              descripcion={
-                anioRegistro
-                  ? `Registrado en ${anioRegistro}`
-                  : "Fecha de registro no disponible"
-              }
-              color="amber"
-            />
-          </div>
-        </section>
-
-        {/* Próxima reserva y datos deportivos */}
-        <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-[#111914]">
-            <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-5 sm:px-6">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                  Próximo encuentro
-                </p>
-                <h2 className="mt-2 text-xl font-black">Tu próxima reserva</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Clock3 className="text-emerald-600" size={20} /> Próximo Partido
+                </h2>
+                {proximaReserva && <EtiquetaEstado estado={estadoReserva(proximaReserva.estado)} />}
               </div>
-              <div className="rounded-xl bg-emerald-400/10 p-3 text-emerald-300">
-                <Flag size={22} />
-              </div>
-            </div>
 
-            <div className="p-5 sm:p-6">
               {proximaReserva ? (
-                <>
-                  <div className="relative overflow-hidden rounded-2xl border border-emerald-300/15 bg-gradient-to-br from-[#1b3021] to-[#101812] p-5 sm:p-6">
-                    <div className="absolute -right-8 -top-8 text-emerald-300/[0.06]">
-                      <Goal size={150} />
-                    </div>
-
-                    <div className="relative">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-emerald-200">
-                          <Zap size={14} />
-                          Partido programado
-                        </span>
-                        <EtiquetaEstado
-                          estado={estadoReserva(proximaReserva.estado)}
-                        />
-                      </div>
-
-                      <h3 className="mt-5 text-2xl font-black sm:text-3xl">
-                        {obtenerNombreCancha(proximaReserva)}
-                      </h3>
-
-                      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-black/20 p-3 text-emerald-200">
-                            <CalendarDays size={19} />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">Fecha</p>
-                            <p className="mt-1 text-sm font-bold">
-                              {formatearFecha(obtenerFechaReserva(proximaReserva))}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-black/20 p-3 text-emerald-200">
-                            <Clock3 size={19} />
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400">Horario</p>
-                            <p className="mt-1 text-sm font-bold">
-                              {formatearHora(proximaReserva.hora_inicio) ||
-                                "Por confirmar"}
-                              {proximaReserva.hora_fin
-                                ? ` – ${formatearHora(proximaReserva.hora_fin)}`
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-emerald-700 bg-emerald-100/60 px-3 py-1 rounded-xl">
+                      ⚽ Cancha Reservada
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      📅 {formatearFecha(obtenerFechaReserva(proximaReserva))} • ⏰ {formatearHora(proximaReserva.hora_inicio)}
+                    </span>
                   </div>
-
-                  <Link
-                    href="/mis-reservas"
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-100/10 px-4 py-3 text-sm font-bold transition hover:border-emerald-400/30 hover:bg-white/[0.04]"
-                  >
-                    Ver detalle de mis reservas
-                    <ChevronRight size={17} />
-                  </Link>
-                </>
-              ) : (
-                <div className="flex min-h-[280px] flex-col items-center justify-center px-5 py-8 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.07] text-emerald-300">
-                    <CalendarDays size={29} />
-                  </div>
-                  <h3 className="mt-5 text-lg font-bold">
-                    ¡Es hora de volver a la cancha!
-                  </h3>
-                  <p className="mt-2 max-w-sm text-sm leading-6 text-gray-500">
-                    No encontramos una reserva futura activa. Explora las
-                    canchas disponibles y organiza tu próximo partido.
+                  <p className="text-base font-bold text-slate-800">
+                    Prepárate para saltar a la cancha y darlo todo en el terreno de juego.
                   </p>
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <p className="text-sm font-medium text-slate-500">No tienes partidos programados próximamente.</p>
                   <Link
-                    href="/canchas"
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-extrabold text-black transition hover:bg-emerald-300"
+                    href="/"
+                    className="mt-4 inline-block bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition"
                   >
-                    Buscar una cancha <ArrowRight size={17} />
+                    Reservar una cancha
                   </Link>
                 </div>
               )}
@@ -1119,528 +696,164 @@ export default function PerfilJugador() {
           </div>
 
           {/* Perfil deportivo */}
-          <div className="rounded-3xl border border-white/[0.08] bg-[#111914]">
-            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-5 sm:px-6">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                  Tu identidad deportiva
-                </p>
-                <h2 className="mt-2 text-xl font-black">Mi estilo de juego</h2>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-5">
+            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <Target className="text-emerald-600" size={20} /> Perfil Deportivo
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-slate-500 font-medium">Deporte favorito</span>
+                <span className="font-bold text-slate-800">{perfilDeportivo.deporte}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setModalDeportivo(true)}
-                aria-label="Editar perfil deportivo"
-                className="rounded-xl border border-emerald-100/10 p-2.5 text-gray-300 transition hover:border-emerald-300/30 hover:text-emerald-300"
-              >
-                <Pencil size={17} />
-              </button>
-            </div>
-
-            <div className="space-y-4 p-5 sm:p-6">
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-emerald-400/10 p-3 text-emerald-300">
-                    <Target size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Modalidad favorita</p>
-                    <p className="mt-1 font-bold">{perfilDeportivo.deporte}</p>
-                  </div>
-                </div>
+              <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-slate-500 font-medium">Posición habitual</span>
+                <span className="font-bold text-slate-800">{perfilDeportivo.posicion}</span>
               </div>
-
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-sky-400/10 p-3 text-sky-300">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Posición habitual</p>
-                    <p className="mt-1 font-bold">{perfilDeportivo.posicion}</p>
-                  </div>
-                </div>
+              <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-slate-500 font-medium">Estilo de juego</span>
+                <span className="font-bold text-slate-800">{perfilDeportivo.estilo}</span>
               </div>
-
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-amber-400/10 p-3 text-amber-300">
-                    <Zap size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Estilo de juego</p>
-                    <p className="mt-1 font-bold">{perfilDeportivo.estilo}</p>
-                  </div>
-                </div>
-              </div>
-
-              {perfilDeportivo.objetivo && (
-                <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.04] p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">
-                    Mi objetivo
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-gray-300">
-                    {perfilDeportivo.objetivo}
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setModalDeportivo(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.06] px-4 py-3 text-sm font-bold text-emerald-200 transition hover:bg-emerald-400/10"
-              >
-                Personalizar perfil deportivo
-                <ArrowRight size={16} />
-              </button>
             </div>
           </div>
-        </section>
 
-        {/* Historial reciente */}
-        <section className="mt-8 overflow-hidden rounded-3xl border border-white/[0.08] bg-[#111914]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-5 sm:px-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                Tu recorrido
-              </p>
-              <h2 className="mt-2 text-xl font-black">Actividad reciente</h2>
-            </div>
-
-            <Link
-              href="/mis-reservas"
-              className="inline-flex items-center gap-2 text-sm font-bold text-emerald-300 transition hover:text-emerald-200"
-            >
-              Ver todas <ArrowUpRight size={16} />
-            </Link>
-          </div>
-
-          {reservas.length > 0 ? (
-            <div className="divide-y divide-white/[0.06]">
-              {[...reservas]
-                .sort((a, b) => {
-                  const fechaA =
-                    fechaValida(obtenerFechaReserva(a))?.getTime() || 0;
-                  const fechaB =
-                    fechaValida(obtenerFechaReserva(b))?.getTime() || 0;
-                  return fechaB - fechaA;
-                })
-                .slice(0, 5)
-                .map((reserva, indice) => {
-                  const estado = estadoReserva(reserva.estado);
-
-                  return (
-                    <div
-                      key={
-                        reserva.id_reserva ??
-                        reserva.id ??
-                        `${obtenerFechaReserva(reserva)}-${indice}`
-                      }
-                      className="flex flex-wrap items-center gap-4 px-5 py-4 transition hover:bg-white/[0.02] sm:px-6"
-                    >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.035] text-emerald-300">
-                        {estado === "completada" ? (
-                          <CheckCircle2 size={21} />
-                        ) : estado === "cancelada" ? (
-                          <X size={21} />
-                        ) : (
-                          <CalendarDays size={21} />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold">
-                          {obtenerNombreCancha(reserva)}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {formatearFecha(obtenerFechaReserva(reserva))}
-                          {reserva.hora_inicio
-                            ? ` · ${formatearHora(reserva.hora_inicio)}`
-                            : ""}
-                        </p>
-                      </div>
-
-                      <EtiquetaEstado estado={estado} />
-                    </div>
-                  );
-                })}
-            </div>
-          ) : (
-            <div className="px-5 py-12 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-gray-400">
-                <Activity size={25} />
-              </div>
-              <h3 className="mt-4 font-bold">Tu historial empieza aquí</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
-                Cuando tengas reservas registradas para tu usuario, aparecerán
-                en esta sección.
-              </p>
-              <Link
-                href="/canchas"
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-extrabold text-black transition hover:bg-emerald-300"
-              >
-                Explorar canchas <ArrowRight size={17} />
-              </Link>
-            </div>
-          )}
-        </section>
-
-        {/* Nota de privacidad y datos */}
-        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-          <ShieldCheck size={19} className="mt-0.5 shrink-0 text-emerald-300" />
-          <p className="text-xs leading-5 text-gray-500">
-            Tus estadísticas se calculan a partir de las reservas que devuelve
-            la API. Las preferencias deportivas y la foto de perfil de esta
-            versión se guardan en este navegador; todavía no se sincronizan
-            automáticamente con tu cuenta en Django.
-          </p>
         </div>
+
       </div>
 
-      {/* Notificación */}
-      {(mensaje || errorGuardado) && (
-        <div
-          role="status"
-          className={`fixed bottom-5 left-4 right-4 z-50 mx-auto flex max-w-lg items-start gap-3 rounded-2xl border p-4 shadow-2xl sm:left-auto sm:right-6 ${
-            errorGuardado
-              ? "border-red-400/20 bg-[#241311] text-red-100"
-              : "border-emerald-400/20 bg-[#102117] text-emerald-100"
-          }`}
-        >
-          {errorGuardado ? (
-            <X size={20} className="mt-0.5 shrink-0" />
-          ) : (
-            <CheckCircle2 size={20} className="mt-0.5 shrink-0" />
-          )}
-          <p className="flex-1 text-sm font-semibold">
-            {errorGuardado || mensaje}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setMensaje("");
-              setErrorGuardado("");
-            }}
-            aria-label="Cerrar notificación"
-          >
-            <X size={17} />
-          </button>
-        </div>
-      )}
-
-      {/* Modal: editar perfil */}
+      {/* MODAL EDITAR PERFIL */}
       {modalPerfil && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
-          onMouseDown={(evento) => {
-            if (evento.target === evento.currentTarget) setModalPerfil(false);
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-editar-perfil"
-            className="my-auto w-full max-w-lg rounded-3xl border border-emerald-100/10 bg-[#111914] p-5 shadow-2xl sm:p-7"
-          >
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                  Mi cuenta
-                </p>
-                <h2
-                  id="titulo-editar-perfil"
-                  className="mt-2 text-2xl font-black"
-                >
-                  Editar información
-                </h2>
-                <p className="mt-2 text-sm text-gray-400">
-                  Actualiza tus datos personales.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalPerfil(false)}
-                aria-label="Cerrar modal"
-                className="rounded-xl border border-emerald-100/10 p-2 text-gray-400 transition hover:text-white"
-              >
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-slate-900">Editar Información</h3>
+              <button onClick={() => setModalPerfil(false)} className="text-slate-400 hover:text-slate-700">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={guardarPerfil} className="space-y-5">
+            <form onSubmit={guardarPerfil} className="space-y-4">
               <div>
-                <label
-                  htmlFor="nombre_completo"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Nombre completo
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nombre Completo</label>
                 <input
-                  id="nombre_completo"
                   type="text"
-                  autoComplete="name"
-                  required
-                  maxLength={150}
                   value={formulario.nombre_completo}
-                  onChange={(e) =>
-                    setFormulario({
-                      ...formulario,
-                      nombre_completo: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-emerald-300/50 focus:ring-2 focus:ring-emerald-300/10"
-                  placeholder="Tu nombre completo"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="email_perfil"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Correo electrónico
-                </label>
-                <input
-                  id="email_perfil"
-                  type="email"
-                  autoComplete="email"
+                  onChange={(e) => setFormulario({ ...formulario, nombre_completo: e.target.value })}
                   required
-                  maxLength={100}
-                  value={formulario.email}
-                  onChange={(e) =>
-                    setFormulario({
-                      ...formulario,
-                      email: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-emerald-300/50 focus:ring-2 focus:ring-emerald-300/10"
-                  placeholder="correo@ejemplo.com"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="telefono_perfil"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Teléfono
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Correo Electrónico</label>
                 <input
-                  id="telefono_perfil"
-                  type="tel"
-                  autoComplete="tel"
-                  maxLength={20}
-                  value={formulario.telefono}
-                  onChange={(e) =>
-                    setFormulario({
-                      ...formulario,
-                      telefono: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-black/20 px-4 py-3 text-white outline-none transition focus:border-emerald-300/50 focus:ring-2 focus:ring-emerald-300/10"
-                  placeholder="Tu número de contacto"
+                  type="email"
+                  value={formulario.email}
+                  onChange={(e) => setFormulario({ ...formulario, email: e.target.value })}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
                 />
               </div>
 
-              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Teléfono</label>
+                <input
+                  type="text"
+                  value={formulario.telefono}
+                  onChange={(e) => setFormulario({ ...formulario, telefono: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setModalPerfil(false)}
-                  className="flex-1 rounded-xl border border-emerald-100/10 px-4 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={guardando}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-extrabold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={guardandoPerfil}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition text-sm shadow-sm"
                 >
-                  {guardando ? (
-                    <LoaderCircle size={17} className="animate-spin" />
-                  ) : (
-                    <Save size={17} />
-                  )}
-                  {guardando ? "Guardando..." : "Guardar cambios"}
+                  {guardandoPerfil ? "Guardando..." : "Guardar Cambios"}
                 </button>
               </div>
             </form>
-          </section>
+          </div>
         </div>
       )}
 
-      {/* Modal: perfil deportivo */}
+      {/* MODAL PREFERENCIAS DEPORTIVAS */}
       {modalDeportivo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
-          onMouseDown={(evento) => {
-            if (evento.target === evento.currentTarget) {
-              setModalDeportivo(false);
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-perfil-deportivo"
-            className="my-auto w-full max-w-lg rounded-3xl border border-emerald-100/10 bg-[#111914] p-5 shadow-2xl sm:p-7"
-          >
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                  Personalización
-                </p>
-                <h2
-                  id="titulo-perfil-deportivo"
-                  className="mt-2 text-2xl font-black"
-                >
-                  Tu perfil deportivo
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-400">
-                  Cuéntanos cómo te gusta jugar.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalDeportivo(false)}
-                aria-label="Cerrar modal"
-                className="rounded-xl border border-emerald-100/10 p-2 text-gray-400 transition hover:text-white"
-              >
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-slate-900">Perfil Deportivo</h3>
+              <button onClick={() => setModalDeportivo(false)} className="text-slate-400 hover:text-slate-700">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={guardarPerfilDeportivo} className="space-y-5">
+            <form onSubmit={guardarPerfilDeportivo} className="space-y-4">
               <div>
-                <label
-                  htmlFor="deporte_favorito"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Modalidad favorita
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Deporte Favorito</label>
                 <select
-                  id="deporte_favorito"
                   value={perfilDeportivo.deporte}
-                  onChange={(e) =>
-                    setPerfilDeportivo({
-                      ...perfilDeportivo,
-                      deporte: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-[#0b100d] px-4 py-3 text-white outline-none focus:border-emerald-300/50"
+                  onChange={(e) => setPerfilDeportivo({ ...perfilDeportivo, deporte: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
                 >
-                  {DEPORTES.map((deporte) => (
-                    <option key={deporte} value={deporte}>
-                      {deporte}
-                    </option>
+                  {DEPORTES.map((d) => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label
-                  htmlFor="posicion_favorita"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Posición habitual
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Posición Habitual</label>
                 <select
-                  id="posicion_favorita"
                   value={perfilDeportivo.posicion}
-                  onChange={(e) =>
-                    setPerfilDeportivo({
-                      ...perfilDeportivo,
-                      posicion: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-[#0b100d] px-4 py-3 text-white outline-none focus:border-emerald-300/50"
+                  onChange={(e) => setPerfilDeportivo({ ...perfilDeportivo, posicion: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
                 >
-                  {POSICIONES.map((posicion) => (
-                    <option key={posicion} value={posicion}>
-                      {posicion}
-                    </option>
+                  {POSICIONES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label
-                  htmlFor="estilo_juego"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Estilo de juego
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Estilo de Juego</label>
                 <select
-                  id="estilo_juego"
                   value={perfilDeportivo.estilo}
-                  onChange={(e) =>
-                    setPerfilDeportivo({
-                      ...perfilDeportivo,
-                      estilo: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-emerald-100/10 bg-[#0b100d] px-4 py-3 text-white outline-none focus:border-emerald-300/50"
+                  onChange={(e) => setPerfilDeportivo({ ...perfilDeportivo, estilo: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition"
                 >
-                  {ESTILOS.map((estilo) => (
-                    <option key={estilo} value={estilo}>
-                      {estilo}
-                    </option>
+                  {ESTILOS.map((es) => (
+                    <option key={es} value={es}>{es}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label
-                  htmlFor="objetivo_deportivo"
-                  className="mb-2 block text-sm font-semibold text-gray-300"
-                >
-                  Mi objetivo deportivo{" "}
-                  <span className="font-normal text-gray-500">
-                    (opcional)
-                  </span>
-                </label>
-                <textarea
-                  id="objetivo_deportivo"
-                  rows={3}
-                  maxLength={300}
-                  value={perfilDeportivo.objetivo}
-                  onChange={(e) =>
-                    setPerfilDeportivo({
-                      ...perfilDeportivo,
-                      objetivo: e.target.value,
-                    })
-                  }
-                  placeholder="Ej. mejorar mi resistencia y jugar cada semana..."
-                  className="w-full resize-none rounded-xl border border-emerald-100/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-emerald-300/50"
-                />
-                <p className="mt-1 text-right text-xs text-gray-600">
-                  {perfilDeportivo.objetivo.length}/300
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-amber-300/10 bg-amber-300/[0.04] p-3 text-xs leading-5 text-gray-400">
-                En esta versión, estas preferencias se guardan en este
-                navegador. Más adelante podemos almacenarlas en Django para
-                que estén disponibles en todos tus dispositivos.
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setModalDeportivo(false)}
-                  className="flex-1 rounded-xl border border-emerald-100/10 px-4 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/5"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-extrabold text-black transition hover:bg-emerald-300"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-sm"
                 >
-                  <Check size={17} />
-                  Guardar preferencias
+                  Guardar Preferencias
                 </button>
               </div>
             </form>
-          </section>
+          </div>
         </div>
       )}
     </main>
