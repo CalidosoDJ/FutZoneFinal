@@ -9,6 +9,8 @@ import RecuperarPasswordModal from "@/app/components/publico/RecuperarPasswordMo
 export default function LoginComponent() {
     const router = useRouter();
 
+    // Estados del formulario
+    const [modalAbierto, setModalAbierto] = useState(false);
     const [correo, setCorreo] = useState("");
     const [password, setPassword] = useState("");
     const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -16,11 +18,10 @@ export default function LoginComponent() {
     const [exito, setExito] = useState(false);
     const [nombreUsuario, setNombreUsuario] = useState("");
     const [progreso, setProgreso] = useState(0);
-    const [modalAbierto, setModalAbierto] = useState(false);
 
     const googleButtonRef = useRef(null);
 
-    // funcion para iniciar sesión con Google
+    // Función para iniciar sesión con Google
     useEffect(() => {
         const handleGoogleSuccess = async (response) => {
             setCargando(true);
@@ -113,7 +114,7 @@ export default function LoginComponent() {
         }
 
         setCargando(true);
-        setProgreso(30); // Inicia la barra de carga
+        setProgreso(30);
 
         try {
             const respuesta = await fetch(
@@ -123,6 +124,7 @@ export default function LoginComponent() {
                     headers: {
                         "Content-Type": "application/json",
                     },
+                    credentials: "include",
                     body: JSON.stringify({
                         email: correo,
                         password: password,
@@ -152,7 +154,6 @@ export default function LoginComponent() {
                 return;
             }
 
-            // 🌟 Animación de Carga Completa
             setProgreso(65);
             setNombreUsuario(usuario.nombre_completo || usuario.username || "Usuario");
 
@@ -166,7 +167,6 @@ export default function LoginComponent() {
                 JSON.stringify(usuario)
             );
 
-            // Redirección tras completar la barra
             setTimeout(() => {
                 if (usuario.id_rol === 1) {
                     router.push("/admin");
@@ -193,7 +193,7 @@ export default function LoginComponent() {
         <section className="h-dvh w-full flex bg-black overflow-hidden">
             <div className="w-full lg:w-[40%] h-full bg-white flex items-center justify-center px-6 sm:px-10 py-4 relative overflow-hidden">
 
-                {/* 🌟 TARJETA CON BARRA DE CARGA PROGRESIVA */}
+                {/* TARJETA CON BARRA DE CARGA PROGRESIVA */}
                 {cargando ? (
                     <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-3xl p-8 flex flex-col items-center text-center shadow-xl transition-all animate-in fade-in zoom-in-95 duration-300">
                         <div className="relative mb-6 flex items-center justify-center">
@@ -216,7 +216,6 @@ export default function LoginComponent() {
                             {exito ? nombreUsuario : "Validando credenciales"}
                         </p>
 
-                        {/* BARRA DE PROGRESO */}
                         <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden shadow-inner">
                             <div
                                 className="h-full bg-green-600 transition-all duration-500 ease-out rounded-full"
@@ -234,10 +233,10 @@ export default function LoginComponent() {
                         onSubmit={iniciarSesion}
                         className="w-full max-w-md transition-all"
                     >
-                        <div className="mb-4">
+                        <div className="mb-3.5">
                             <Link
                                 href="/"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-green-600 transition-colors duration-200 group mb-3"
+                                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-green-600 transition-colors duration-200 group mb-2"
                             >
                                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
                                 <span>Volver al Inicio</span>
@@ -257,33 +256,45 @@ export default function LoginComponent() {
                             </p>
                         </div>
 
-                        <div className="mb-3.5">
-                            <label className="text-black text-sm font-medium block mb-1.5">
+                        {/* CORREO */}
+                        <div className="mb-3">
+                            <label
+                                htmlFor="email"
+                                className="text-black text-sm font-medium block mb-1.5"
+                            >
                                 Correo
                             </label>
 
                             <input
+                                id="email"
                                 type="email"
                                 placeholder="Ingrese su Correo Electrónico"
                                 value={correo}
                                 onChange={(e) => setCorreo(e.target.value)}
                                 required
+                                autoComplete="email"
                                 className="w-full bg-gray-300 border border-black text-black px-4 py-3 rounded-2xl outline-none focus:border-gray-950 transition text-sm sm:text-base"
                             />
                         </div>
 
-                        <div className="mb-3.5">
-                            <label className="text-black text-sm font-medium block mb-1.5">
+                        {/* CONTRASEÑA */}
+                        <div className="mb-4">
+                            <label
+                                htmlFor="password"
+                                className="text-black text-sm font-medium block mb-1.5"
+                            >
                                 Contraseña
                             </label>
 
                             <div className="relative flex items-center">
                                 <input
+                                    id="password"
                                     type={mostrarPassword ? "text" : "password"}
                                     placeholder="Ingrese su Contraseña"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    autoComplete="current-password"
                                     className="w-full bg-gray-300 border border-black text-black px-4 py-3 pr-12 rounded-2xl outline-none focus:border-gray-950 transition text-sm sm:text-base"
                                 />
 
@@ -307,6 +318,7 @@ export default function LoginComponent() {
                                 </button>
                             </div>
 
+                            {/* RECUPERAR CONTRASEÑA */}
                             <button
                                 type="button"
                                 onClick={() => setModalAbierto(true)}
@@ -324,13 +336,13 @@ export default function LoginComponent() {
                         <button
                             type="submit"
                             disabled={cargando}
-                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-500 transition text-white py-3.5 px-4 rounded-2xl text-base sm:text-lg font-semibold cursor-pointer shadow-md hover:shadow-lg"
+                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-500 transition text-white py-3 px-4 rounded-2xl text-base sm:text-lg font-semibold cursor-pointer shadow-md hover:shadow-lg"
                         >
                             Iniciar Sesión
                         </button>
 
-                        {/* SEPARADOR Y BOTÓN DE GOOGLE MEJORADO */}
-                        <div className="my-4">
+                        {/* SEPARADOR Y BOTÓN DE GOOGLE */}
+                        <div className="my-3.5">
                             <div className="relative flex items-center justify-center mb-3">
                                 <div className="border-t border-gray-300 w-full"></div>
                                 <span className="bg-white px-3 text-xs font-medium uppercase tracking-wider text-gray-500 whitespace-nowrap">
@@ -347,7 +359,7 @@ export default function LoginComponent() {
                             </div>
                         </div>
 
-                        <p className="text-gray-500 text-sm mt-3 text-center">
+                        <p className="text-gray-500 text-sm mt-2.5 text-center">
                             ¿No tienes cuenta?{" "}
                             <span
                                 onClick={() => router.push("/register")}
@@ -367,11 +379,12 @@ export default function LoginComponent() {
                     backgroundImage: "url('/images/login3.avif')",
                 }}
             >
-                <div className="absolute inset-0 bg-black/50"></div>
+                <div className="absolute inset-0 bg-black/50" />
 
                 <div className="relative z-10 flex flex-col justify-end p-16 text-white">
                     <h1 className="text-6xl font-bold mb-5 leading-tight">
                         Vive la pasión
+                        <br />
                         del fútbol
                     </h1>
 
