@@ -584,3 +584,64 @@ class ChatbotAPIView(APIView):
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'
         return response
+    
+from .models import CommunityMessage, MensajePrivado
+from .serializers import CommunityMessageSerializer, MensajePrivadoSerializer
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def comunidad_mensajes(request):
+    if request.method == "GET":
+        mensajes = CommunityMessage.objects.select_related("id_usuario").all()
+        serializer = CommunityMessageSerializer(mensajes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    usuario_id = request.data.get("id_usuario")
+    content = (request.data.get("content") or "").strip()
+    if not usuario_id or not content:
+        return Response({"error": "Falta id_usuario o contenido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    usuario = Usuarios.objects.filter(pk=usuario_id).first()
+    if not usuario:
+        return Response({"error": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    nuevo = CommunityMessage.objects.create(
+        id_usuario=usuario,
+        content=content,
+        category=request.data.get("category", "GENERAL"),
+        match_date=request.data.get("match_date") or None,
+        spots_needed=request.data.get("spots_needed") or None,
+    )
+    return Response(CommunityMessageSerializer(nuevo).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def chat_privado(request, usuario_id):
+    mi_id = request.query_params.get("mi_id") or request.data.get("id_remitente")
+    if not mi_id:
+        return Response({"error": "Falta el ID del usuario remitente."}, status=status.HTTP_400_BAD_REQUEST)
+
+    usuario_actual = Usuarios.objects.filter(pk=mi_id).first()
+    otro_usuario = Usuarios.objects.filter(pk=usuario_id).first()
+    if not usuario_actual or not otro_usuario:
+        return Response({"error": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        mensajes = MensajePrivado.objects.filter(
+            id_remitente__in=[usuario_actual, otro_usuario],
+            id_destinatario__in=[usuario_actual, otro_usuario],
+        ).order_by("fecha_envio")
+        return Response(MensajePrivadoSerializer(mensajes, many=True).data, status=status.HTTP_200_OK)
+
+    contenido = (request.data.get("contenido") or "").strip()
+    if not contenido:
+        return Response({"error": "El contenido no puede estar vacío."}, status=status.HTTP_400_BAD_REQUEST)
+
+    nuevo = MensajePrivado.objects.create(
+        id_remitente=usuario_actual,
+        id_destinatario=otro_usuario,
+        contenido=contenido,
+    )
+    return Response(MensajePrivadoSerializer(nuevo).data, status=status.HTTP_201_CREATED)

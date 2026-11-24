@@ -3,20 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BannerBienvenida from "@/app/components/publico/BannerBienvenida";
 import {
     ArrowRight,
     CalendarDays,
-    ShieldCheck,
     MapPinned,
     Clock3,
     CalendarCheck,
-    Users,
-    MessageCircleQuestion,
-    Handshake,
+    ShieldCheck,
     Megaphone,
     Newspaper,
     Tag,
     ChevronRight,
+    Users,
+    MessageCircleQuestion,
+    Handshake,
 } from "lucide-react";
 
 export default function DashboardComponent() {
@@ -54,6 +55,7 @@ export default function DashboardComponent() {
             router.replace("/login");
         }
     }, [router]);
+
     const [publicaciones, setPublicaciones] = useState([]);
     const [cargandoPublicaciones, setCargandoPublicaciones] = useState(true);
     const [errorPublicaciones, setErrorPublicaciones] = useState(false);
@@ -61,18 +63,13 @@ export default function DashboardComponent() {
     useEffect(() => {
         const cargarPublicaciones = async () => {
             try {
-                const respuesta = await fetch(
-                    "http://127.0.0.1:8000/api/publicaciones/?publicadas=true"
-                );
-
-                if (!respuesta.ok) {
-                    throw new Error("No se pudieron cargar las publicaciones");
-                }
-
-                const datos = await respuesta.json();
-                setPublicaciones(datos);
-            } catch (error) {
-                console.error("Error cargando publicaciones:", error);
+                const res = await fetch("http://127.0.0.1:8000/api/publicaciones/");
+                if (!res.ok) throw new Error("Error cargando publicaciones");
+                const data = await res.json();
+                const lista = Array.isArray(data) ? data : data.results || [];
+                setPublicaciones(lista);
+            } catch (err) {
+                console.error(err);
                 setErrorPublicaciones(true);
             } finally {
                 setCargandoPublicaciones(false);
@@ -85,46 +82,9 @@ export default function DashboardComponent() {
     // Prevenimos renderizar hasta que la sesión sea cargada
     if (!usuario) return null;
 
-    // Obtener el nombre soportando los nombres de tu tabla (nombre_completo o nombre)
-    const nombreMostrado = usuario.nombre_completo || usuario.nombre || usuario.username || "Jugador";
-
     return (
         <>
-            {/* Tarjeta principal */}
-            <section className="bg-gradient-to-br from-white via-slate-50 to-green-50 rounded-[35px] border border-slate-200 shadow-xl px-8 py-6 text-center">
-                <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-5 py-2 rounded-full font-semibold">
-                    ⚽ ¡Hola, {nombreMostrado}! Bienvenido a FutZone
-                </span>
-
-                <h1 className="mt-4 text-4xl lg:text-5xl font-black text-gray-800 leading-tight">
-                    Tu próximo partido comienza aquí.
-                </h1>
-
-                <p className="mt-4 text-gray-700 text-lg lg:text-xl max-w-3xl mx-auto leading-8">
-                    Reserva una cancha en segundos, administra tus horarios, descubre nuevos escenarios deportivos y vive una experiencia moderna desde FutZone.
-                </p>
-
-                <div className="flex justify-center gap-5 mt-8">
-                    <Link
-                        href="/canchas"
-                        className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-500 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:shadow-green-300/50 hover:scale-105 transition-all duration-300"
-                    >
-                        ⚽ Reservar cancha
-                        <ArrowRight
-                            size={20}
-                            className="group-hover:translate-x-1 transition-transform"
-                        />
-                    </Link>
-
-                    <Link
-                        href="/mis-reservas"
-                        className="group inline-flex items-center gap-3 bg-white border border-slate-300 text-gray-700 px-8 py-4 rounded-2xl font-bold shadow-md hover:bg-slate-100 hover:shadow-lg hover:scale-105 transition-all duration-300"
-                    >
-                        <CalendarDays size={20} />
-                        Mis reservas
-                    </Link>
-                </div>
-            </section>
+            <BannerBienvenida />
 
             <div className="mt-12 mb-6">
                 <h2 className="text-3xl font-black text-gray-800">
@@ -170,7 +130,6 @@ export default function DashboardComponent() {
                     </p>
                 </div>
             </section>
-
 
             {/* NOTICIAS Y PROMOCIONES */}
             <section className="mt-14">
@@ -282,8 +241,8 @@ export default function DashboardComponent() {
                                             <div className="absolute top-4 left-4">
                                                 <span
                                                     className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold shadow ${publicacion.tipo === "Promoción"
-                                                            ? "bg-amber-100 text-amber-800"
-                                                            : "bg-blue-100 text-blue-800"
+                                                        ? "bg-amber-100 text-amber-800"
+                                                        : "bg-blue-100 text-blue-800"
                                                         }`}
                                                 >
                                                     <Tag size={13} />
@@ -332,7 +291,6 @@ export default function DashboardComponent() {
                         </div>
                     )}
             </section>
-
 
             {/* AYUDA Y MÁS INFORMACIÓN */}
             <section className="mt-12">

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/publico/NavBar";
 import ContenidoPrincipal from "@/app/components/publico/ContenidoPrincipal";
-import Footer from "@/app/components/publico/Footer";
+import FooterJugador from "@/app/components/publico/FooterJugador";
 import SplashScreen from "./components/publico/SplashScreen";
 
 export default function Home() {
@@ -51,7 +51,7 @@ export default function Home() {
                 <>
                     <NavBar />
                     <ContenidoPrincipal />
-                    <Footer />
+                    <FooterJugador />
                 </>
             )}
         </>

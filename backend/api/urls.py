@@ -15,6 +15,8 @@ from .views import (
     LoginViewSet,
     NotificacionViewSet,
     PublicacionViewSet,
+    comunidad_mensajes,
+    chat_privado,
     asistente
 )
 
@@ -36,5 +38,7 @@ urlpatterns = [
     path("asistente/", asistente, name="asistente"),
     path("auth/google/", google_auth, name="google_auth"),
     path("chatbot/", ChatbotAPIView.as_view(), name="futzone-chatbot"),
+    path("comunidad/", comunidad_mensajes, name="comunidad_mensajes"),
+    path("chat/<int:usuario_id>/", chat_privado, name="chat_privado"),
     path("", include(router.urls)),
 ]

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
     Calendar,
     Clock,
@@ -11,11 +10,26 @@ import {
     Pencil,
     Trash2,
     X,
+    CreditCard,
+    CheckCircle2,
+    AlertCircle,
 } from "lucide-react";
+import PagarReservaModal from "./PagarReservaModal";
 
 const API_RESERVAS = "http://127.0.0.1:8000/api/reservas/";
 const API_CANCHAS = "http://127.0.0.1:8000/api/canchas/";
 const API_SEDES = "http://127.0.0.1:8000/api/sedes/";
+const API = "http://127.0.0.1:8000";
+
+const obtenerImagenCancha = (cancha) => {
+    const ruta = cancha?.imagen_url || cancha?.imagen || "";
+    if (!ruta) return "/images/cancha1.jpg";
+    if (ruta.startsWith("http")) return ruta;
+    if (ruta.startsWith("/media/")) return `${API}${ruta}`;
+    if (ruta.startsWith("media/")) return `${API}/${ruta}`;
+    if (ruta.startsWith("/")) return `${API}${ruta}`;
+    return `${API}/media/${ruta.replace(/^media\//, "")}`;
+};
 
 export default function ReservaCard() {
     const [reservas, setReservas] = useState([]);
@@ -30,13 +44,18 @@ export default function ReservaCard() {
     const [nuevaHoraInicio, setNuevaHoraInicio] = useState("");
     const [nuevaHoraFin, setNuevaHoraFin] = useState("");
 
+    // Estados para el Modal de Pagos del Jugador
+    const [modalPagoAbierto, setModalPagoAbierto] = useState(false);
+    const [reservaParaPagar, setReservaParaPagar] = useState(null);
+
     const cargarReservas = async () => {
         setCargando(true);
         setError("");
 
         try {
-            const usuarioGuardado = localStorage.getItem("usuarioLogueado");
-
+            const usuarioGuardado =
+                localStorage.getItem("usuarioLogueado") ||
+                sessionStorage.getItem("usuarioLogueado");
             if (!usuarioGuardado) {
                 setError("Inicia sesión para consultar tus reservas.");
                 return;
@@ -66,38 +85,24 @@ export default function ReservaCard() {
                 resSed.json(),
             ]);
 
-            const listaReservas = Array.isArray(datosRes)
-                ? datosRes
-                : datosRes.results || [];
-
-            const listaCanchas = Array.isArray(datosCan)
-                ? datosCan
-                : datosCan.results || [];
-
-            const listaSedes = Array.isArray(datosSed)
-                ? datosSed
-                : datosSed.results || [];
+            const listaReservas = Array.isArray(datosRes) ? datosRes : datosRes.results || [];
+            const listaCanchas = Array.isArray(datosCan) ? datosCan : datosCan.results || [];
+            const listaSedes = Array.isArray(datosSed) ? datosSed : datosSed.results || [];
 
             const misReservas = listaReservas
-                .filter(
-                    (r) => Number(r.id_usuario) === idUsuario
-                )
+                .filter((r) => Number(r.id_usuario) === idUsuario)
                 .map((r) => {
-                    const cancha = listaCanchas.find(
-                        (c) => Number(c.id_cancha) === Number(r.id_cancha)
-                    );
-
-                    const sede = listaSedes.find(
-                        (s) => Number(s.id_sede) === Number(cancha?.id_sede)
-                    );
+                    const cancha = listaCanchas.find((c) => Number(c.id_cancha) === Number(r.id_cancha));
+                    const sede = listaSedes.find((s) => Number(s.id_sede) === Number(cancha?.id_sede));
+                    const imagenCancha = obtenerImagenCancha(cancha);
 
                     return {
                         ...r,
-                        imagen: cancha?.imagen || "/images/cancha1.jpg",
+                        imagen: imagenCancha,
+                        nombre_cancha: cancha?.nombre_cancha || cancha?.nombre || "Cancha FutZone",
                         direccion: sede?.direccion || "Dirección no disponible",
                     };
                 });
-
             setReservas(misReservas);
         } catch (err) {
             console.error(err);
@@ -134,92 +139,59 @@ export default function ReservaCard() {
         setMensaje("");
 
         try {
-            const respuesta = await fetch(
-                `${API_RESERVAS}${reservaEditando.id_reserva}/`,
-                {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        fecha_reserva: nuevaFecha,
-                        hora_inicio: nuevaHoraInicio,
-                        hora_fin: nuevaHoraFin,
-                    }),
-                }
-            );
+            const respuesta = await fetch(`${API_RESERVAS}${reservaEditando.id_reserva}/`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fecha_reserva: nuevaFecha,
+                    hora_inicio: nuevaHoraInicio,
+                    hora_fin: nuevaHoraFin,
+                }),
+            });
 
             if (!respuesta.ok) {
-                const detalle = await respuesta.text();
-                console.error("Respuesta de Django:", detalle);
-                throw new Error(
-                    "Django no permitió actualizar la reserva. Verifica que el endpoint admita PATCH."
-                );
+                throw new Error("No se pudo actualizar la reserva en el servidor.");
             }
 
             setReservaEditando(null);
             setMensaje("Reserva actualizada correctamente.");
             await cargarReservas();
         } catch (err) {
-            setMensaje(err.message || "No se pudo actualizar la reserva.");
+            setMensaje(err.message || "Error al actualizar.");
         } finally {
             setProcesando(false);
         }
     };
 
-
     const eliminarReserva = async (r) => {
-        console.log("Reserva recibida:", r);
-        console.log("ID de reserva a eliminar:", r.id_reserva);
-        console.log("URL de eliminación:", `${API_RESERVAS}${r.id_reserva}/`);
-
-        const confirmar = window.confirm(
-            `¿Deseas eliminar la reserva #${r.id_reserva} de ${r.nombre_cancha}?`
-        );
-
+        const confirmar = window.confirm(`¿Deseas eliminar la reserva #${r.id_reserva} de ${r.nombre_cancha}?`);
         if (!confirmar) return;
 
         setProcesando(true);
         setMensaje("");
 
         try {
-            const respuesta = await fetch(
-                `${API_RESERVAS}${r.id_reserva}/`,
-                {
-                    method: "DELETE",
-                }
-            );
+            const respuesta = await fetch(`${API_RESERVAS}${r.id_reserva}/`, {
+                method: "DELETE",
+            });
 
             if (!respuesta.ok) {
-                const detalle = await respuesta.text();
-
-                console.error("Estado HTTP:", respuesta.status);
-                console.error("Respuesta de Django:", detalle);
-
-                setMensaje(
-                    `Error al eliminar la reserva. Código HTTP: ${respuesta.status}`
-                );
-
-                return;
+                throw new Error("Error al eliminar la reserva.");
             }
 
             setReservaSeleccionada(null);
             setMensaje("Reserva eliminada correctamente.");
-
             await cargarReservas();
-
         } catch (err) {
-            console.error("Error de conexión:", err);
-            setMensaje(err.message || "No se pudo eliminar la reserva.");
+            setMensaje(err.message || "No se pudo eliminar.");
         } finally {
             setProcesando(false);
         }
     };
 
-
     if (cargando) {
         return (
-            <div className="rounded-3xl bg-white p-12 text-center shadow-lg">
+            <div className="rounded-3xl bg-white p-16 text-center shadow-sm border border-slate-200 text-slate-500 font-medium">
                 Cargando tus reservas...
             </div>
         );
@@ -227,11 +199,11 @@ export default function ReservaCard() {
 
     if (error) {
         return (
-            <div className="rounded-3xl bg-white p-10 text-center shadow-lg">
-                <p className="font-semibold text-red-600">{error}</p>
+            <div className="rounded-3xl bg-white p-12 text-center shadow-sm border border-slate-200">
+                <p className="font-semibold text-rose-600 mb-4">{error}</p>
                 <button
                     onClick={cargarReservas}
-                    className="mt-5 rounded-xl bg-green-600 px-6 py-3 text-white"
+                    className="rounded-2xl bg-emerald-600 px-6 py-3 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-sm"
                 >
                     Intentar nuevamente
                 </button>
@@ -242,116 +214,121 @@ export default function ReservaCard() {
     return (
         <div>
             {mensaje && (
-                <div className="mb-6 rounded-xl bg-blue-50 p-4 text-blue-800">
-                    <div className="flex items-center justify-between gap-3">
-                        <p>{mensaje}</p>
-                        <button onClick={() => setMensaje("")} aria-label="Cerrar mensaje">
-                            <X size={20} />
-                        </button>
-                    </div>
+                <div className="mb-6 rounded-2xl bg-emerald-50 p-4 text-emerald-900 border border-emerald-200 shadow-xs flex items-center justify-between gap-3 animate-in fade-in">
+                    <p className="text-xs font-bold">{mensaje}</p>
+                    <button onClick={() => setMensaje("")} className="cursor-pointer text-emerald-700 hover:text-emerald-900">
+                        <X size={18} />
+                    </button>
                 </div>
             )}
 
             {reservas.length === 0 ? (
-                <div className="rounded-3xl bg-white p-16 text-center shadow-lg">
-                    <h2 className="text-3xl font-bold text-gray-700">
-                        Aún no tienes reservas
-                    </h2>
-                    <p className="mt-3 text-gray-500">
-                        Cuando realices una reserva aparecerá aquí.
-                    </p>
+                <div className="rounded-3xl bg-white p-16 text-center shadow-sm border border-slate-200">
+                    <h2 className="text-2xl font-black text-slate-800">Aún no tienes reservas activas</h2>
+                    <p className="mt-2 text-sm text-slate-400">Cuando reserves una cancha en FutZone, aparecerá aquí.</p>
                 </div>
             ) : (
                 <div className="grid gap-8 lg:grid-cols-2">
                     {reservas.map((r) => (
                         <div
                             key={r.id_reserva}
-                            className="overflow-hidden rounded-3xl bg-white shadow-lg transition hover:shadow-xl"
+                            className="overflow-hidden rounded-3xl bg-white shadow-md hover:shadow-xl transition-all border border-slate-200/80 flex flex-col justify-between group"
                         >
-                            <img
-                                src={r.imagen}
-                                alt={r.nombre_cancha || "Cancha reservada"}
-                                className="h-64 w-full bg-gray-200 object-cover"
-                                onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/images/cancha1.jpg";
-                                }}
-                            />
-
-                            <div className="p-7">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <h2 className="text-2xl font-bold text-gray-800">
-                                        {r.nombre_cancha}
-                                    </h2>
-
-                                    <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800">
-                                        {r.estado}
+                            <div>
+                                {/* Imagen con Overlay Superior */}
+                                <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+                                    <img
+                                        src={r.imagen}
+                                        alt={r.nombre_cancha}
+                                        className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                                        onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = "/images/cancha1.jpg";
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
+                                    <span className="absolute top-4 right-4 rounded-full bg-white/90 backdrop-blur-md px-3.5 py-1 text-xs font-extrabold text-slate-800 shadow-sm border border-slate-200/50">
+                                        #{r.id_reserva}
                                     </span>
                                 </div>
 
-                                <p className="mt-2 text-sm text-gray-500">
-                                    Reserva #{r.id_reserva}
-                                </p>
-
-                                <div className="mt-6 space-y-4 text-gray-600">
-                                    <div className="flex items-center gap-3">
-                                        <Calendar size={20} />
-                                        <span>{r.fecha_reserva}</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
-                                        <Clock size={20} />
-                                        <span>
-                                            {String(r.hora_inicio).slice(0, 5)}
-                                            {" - "}
-                                            {String(r.hora_fin).slice(0, 5)}
+                                <div className="p-6 space-y-5">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                                            {r.nombre_cancha}
+                                        </h2>
+                                        <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${r.estado === "Pagado" || r.estado === "Confirmada"
+                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                                            }`}>
+                                            {r.estado === "Pagado" ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                                            {r.estado || "Pendiente"}
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <MapPin size={20} />
-                                        <span>{r.direccion}</span>
+                                    <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-2.5">
+                                            <Calendar size={15} className="text-emerald-600 shrink-0" />
+                                            <span className="font-semibold">{r.fecha_reserva}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2.5">
+                                            <Clock size={15} className="text-emerald-600 shrink-0" />
+                                            <span className="font-semibold">
+                                                {String(r.hora_inicio).slice(0, 5)} - {String(r.hora_fin).slice(0, 5)}
+                                            </span>
+                                        </div>
+
+                                        <div className="col-span-2 flex items-center gap-2.5 pt-2 border-t border-slate-200/60">
+                                            <MapPin size={15} className="text-emerald-600 shrink-0" />
+                                            <span className="truncate">{r.direccion}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <DollarSign size={20} />
-                                        <span className="text-xl font-bold text-green-600">
+                                    <div className="flex items-center justify-between pt-1">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Valor Total</span>
+                                        <span className="text-2xl font-black text-emerald-600 tracking-tight">
                                             ${(Number(r.total) || 0).toLocaleString("es-CO")}
                                         </span>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {/* Botones de Acción Unificados y Estilizados */}
+                            <div className="p-6 pt-0 space-y-3">
+                                <button
+                                    onClick={() => {
+                                        setReservaParaPagar(r);
+                                        setModalPagoAbierto(true);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-3.5 font-extrabold text-white text-xs uppercase tracking-wider transition shadow-sm cursor-pointer"
+                                >
+                                    <CreditCard size={16} />
+                                    Pagar Reserva (Nequi / Efectivo)
+                                </button>
+
+                                <div className="grid grid-cols-3 gap-2">
                                     <button
                                         onClick={() => setReservaSeleccionada(r)}
-                                        className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+                                        className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 py-2.5 font-bold text-slate-700 text-xs transition cursor-pointer"
                                     >
-                                        <Eye size={18} />
-                                        Ver reserva
+                                        <Eye size={14} /> Detalle
                                     </button>
 
                                     <button
                                         onClick={() => abrirEdicion(r)}
                                         disabled={procesando}
-                                        className="flex items-center justify-center gap-2 rounded-xl border border-amber-500 py-3 font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                        className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 py-2.5 font-bold text-xs transition cursor-pointer disabled:opacity-50"
                                     >
-                                        <Pencil size={18} />
-                                        Editar
+                                        <Pencil size={14} /> Editar
                                     </button>
 
-                                    <Link
-                                        href={`/ reserva / ${r.id_cancha} `}
-                                        className="flex items-center justify-center rounded-xl bg-green-600 py-3 font-semibold text-white hover:bg-green-700"
-                                    >
-                                        Ver cancha
-                                    </Link>
-
-                                    <button onClick={() => eliminarReserva(r)}
+                                    <button
+                                        onClick={() => eliminarReserva(r)}
                                         disabled={procesando}
-                                        className="flex items-center justify-center gap-2 rounded-xl border border-red-500 py-3 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                        className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 py-2.5 font-bold text-xs transition cursor-pointer disabled:opacity-50"
                                     >
-                                        <Trash2 size={18} />
-                                        Eliminar
+                                        <Trash2 size={14} /> Cancelar
                                     </button>
                                 </div>
                             </div>
@@ -360,54 +337,54 @@ export default function ReservaCard() {
                 </div>
             )}
 
-            {/* VENTANA PARA VER LA RESERVA */}
+            {/* MODAL DE PAGOS */}
+            <PagarReservaModal
+                mostrarModal={modalPagoAbierto}
+                setMostrarModal={setModalPagoAbierto}
+                reservaSeleccionada={reservaParaPagar}
+                onPagoExitoso={() => cargarReservas()}
+            />
+
+            {/* MODAL DETALLES */}
             {reservaSeleccionada && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-bold text-gray-800">
-                                Detalles de la reserva
-                            </h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl text-slate-700 border border-slate-200">
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <h3 className="text-lg font-black text-slate-900">Resumen de Reserva</h3>
                             <button
                                 onClick={() => setReservaSeleccionada(null)}
-                                className="text-gray-500 hover:text-gray-800"
-                                aria-label="Cerrar"
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition cursor-pointer"
                             >
-                                <X size={24} />
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <div className="mt-5 space-y-4 text-gray-700">
-                            <p>
-                                <strong>Número:</strong> #{reservaSeleccionada.id_reserva}
-                            </p>
-                            <p>
-                                <strong>Cancha:</strong> {reservaSeleccionada.nombre_cancha}
-                            </p>
-                            <p>
-                                <strong>Fecha:</strong> {reservaSeleccionada.fecha_reserva}
-                            </p>
-                            <p>
-                                <strong>Horario:</strong>{" "}
-                                {String(reservaSeleccionada.hora_inicio).slice(0, 5)}
-                                {" - "}
-                                {String(reservaSeleccionada.hora_fin).slice(0, 5)}
-                            </p>
-                            <p>
-                                <strong>Dirección:</strong> {reservaSeleccionada.direccion}
-                            </p>
-                            <p>
-                                <strong>Total:</strong>{" "}
-                                ${(Number(reservaSeleccionada.total) || 0).toLocaleString("es-CO")}
-                            </p>
-                            <p>
-                                <strong>Estado:</strong> {reservaSeleccionada.estado}
-                            </p>
+                        <div className="my-5 space-y-3 text-xs">
+                            <div className="flex justify-between p-3 bg-slate-50 rounded-xl">
+                                <span className="text-slate-400 font-semibold">ID Reserva</span>
+                                <span className="font-bold text-slate-800">#{reservaSeleccionada.id_reserva}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-slate-50 rounded-xl">
+                                <span className="text-slate-400 font-semibold">Cancha</span>
+                                <span className="font-bold text-slate-800">{reservaSeleccionada.nombre_cancha}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-slate-50 rounded-xl">
+                                <span className="text-slate-400 font-semibold">Fecha</span>
+                                <span className="font-bold text-slate-800">{reservaSeleccionada.fecha_reserva}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-slate-50 rounded-xl">
+                                <span className="text-slate-400 font-semibold">Horario</span>
+                                <span className="font-bold text-slate-800">{String(reservaSeleccionada.hora_inicio).slice(0, 5)} - {String(reservaSeleccionada.hora_fin).slice(0, 5)}</span>
+                            </div>
+                            <div className="flex justify-between p-3 bg-slate-50 rounded-xl">
+                                <span className="text-slate-400 font-semibold">Sede / Dirección</span>
+                                <span className="font-bold text-slate-800 truncate max-w-[200px]">{reservaSeleccionada.direccion}</span>
+                            </div>
                         </div>
 
                         <button
                             onClick={() => setReservaSeleccionada(null)}
-                            className="mt-7 w-full rounded-xl bg-gray-800 py-3 font-semibold text-white hover:bg-gray-900"
+                            className="w-full rounded-2xl bg-slate-900 py-3 font-bold text-white text-xs hover:bg-slate-800 transition cursor-pointer"
                         >
                             Cerrar
                         </button>
@@ -415,81 +392,71 @@ export default function ReservaCard() {
                 </div>
             )}
 
-            {/* VENTANA PARA EDITAR LA RESERVA */}
+            {/* MODAL EDICIÓN */}
             {reservaEditando && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-bold text-gray-800">
-                                Editar reserva
-                            </h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl text-slate-700 border border-slate-200">
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900">Modificar Reserva</h3>
+                                <p className="text-[11px] text-slate-400">{reservaEditando.nombre_cancha}</p>
+                            </div>
                             <button
                                 onClick={() => setReservaEditando(null)}
-                                aria-label="Cerrar"
-                                className="text-gray-500 hover:text-gray-800"
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition cursor-pointer"
                             >
-                                <X size={24} />
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <p className="mt-2 text-gray-500">
-                            {reservaEditando.nombre_cancha}
-                        </p>
-
-                        <div className="mt-6 space-y-5">
+                        <div className="my-5 space-y-4 text-xs">
                             <div>
-                                <label className="mb-2 block font-semibold text-gray-700">
-                                    Fecha
-                                </label>
+                                <label className="block font-bold text-slate-600 mb-1.5">Nueva Fecha</label>
                                 <input
                                     type="date"
                                     value={nuevaFecha}
                                     min={new Date().toLocaleDateString("en-CA")}
                                     onChange={(e) => setNuevaFecha(e.target.value)}
-                                    className="w-full rounded-xl border border-gray-300 p-3 text-gray-800"
+                                    className="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:border-emerald-600"
                                 />
                             </div>
 
-                            <div>
-                                <label className="mb-2 block font-semibold text-gray-700">
-                                    Hora de inicio
-                                </label>
-                                <input
-                                    type="time"
-                                    value={nuevaHoraInicio}
-                                    onChange={(e) => setNuevaHoraInicio(e.target.value)}
-                                    className="w-full rounded-xl border border-gray-300 p-3 text-gray-800"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block font-semibold text-gray-700">
-                                    Hora de finalización
-                                </label>
-                                <input
-                                    type="time"
-                                    value={nuevaHoraFin}
-                                    onChange={(e) => setNuevaHoraFin(e.target.value)}
-                                    className="w-full rounded-xl border border-gray-300 p-3 text-gray-800"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block font-bold text-slate-600 mb-1.5">Hora Inicio</label>
+                                    <input
+                                        type="time"
+                                        value={nuevaHoraInicio}
+                                        onChange={(e) => setNuevaHoraInicio(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:border-emerald-600"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block font-bold text-slate-600 mb-1.5">Hora Fin</label>
+                                    <input
+                                        type="time"
+                                        value={nuevaHoraFin}
+                                        onChange={(e) => setNuevaHoraFin(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 p-3 bg-slate-50 focus:outline-none focus:border-emerald-600"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="mt-7 flex gap-3">
+                        <div className="flex gap-3 pt-2">
                             <button
                                 onClick={guardarEdicion}
                                 disabled={procesando}
-                                className="flex-1 rounded-xl bg-green-600 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                                className="flex-1 rounded-2xl bg-emerald-600 py-3 font-bold text-white text-xs hover:bg-emerald-700 transition cursor-pointer shadow-sm disabled:opacity-50"
                             >
-                                {procesando ? "Guardando..." : "Guardar cambios"}
+                                {procesando ? "Guardando..." : "Guardar Cambios"}
                             </button>
-
                             <button
                                 onClick={() => setReservaEditando(null)}
                                 disabled={procesando}
-                                className="flex-1 rounded-xl border border-gray-300 py-3 font-semibold text-gray-700 hover:bg-gray-100"
+                                className="flex-1 rounded-2xl bg-slate-100 py-3 font-bold text-slate-600 text-xs hover:bg-slate-200 transition cursor-pointer"
                             >
-                                Volver
+                                Cancelar
                             </button>
                         </div>
                     </div>

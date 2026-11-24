@@ -297,3 +297,41 @@ class Usuarios(models.Model):
         managed = False
         db_table = 'usuarios'
 
+class CommunityMessage(models.Model):
+    CATEGORY_CHOICES = [
+        ("GENERAL", "General"),
+        ("BUSCO_JUGADOR", "Busco Jugador"),
+        ("RETO_VS", "Reto VS"),
+    ]
+
+    id_mensaje = models.AutoField(primary_key=True)
+    id_usuario = models.ForeignKey(
+        Usuarios,
+        on_delete=models.CASCADE,
+        db_column="id_usuario",
+        related_name="community_messages",
+    )
+    content = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="GENERAL")
+    match_date = models.CharField(max_length=100, blank=True, null=True)
+    spots_needed = models.PositiveIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = "comunidad_mensajes"
+        ordering = ["created_at"]
+
+
+class MensajePrivado(models.Model):
+    id_mensaje_privado = models.AutoField(primary_key=True)
+    id_remitente = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_enviados")
+    id_destinatario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, related_name="mensajes_recibidos")
+    contenido = models.TextField()
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        managed = True
+        db_table = "mensaje_privado"
+        ordering = ["fecha_envio"]

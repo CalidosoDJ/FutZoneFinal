@@ -373,3 +373,46 @@ class NotificacionSerializer(serializers.ModelSerializer):
             "id_referencia",
             "fecha_envio",
         ]
+        
+from .models import CommunityMessage, MensajePrivado
+
+class CommunityMessageSerializer(serializers.ModelSerializer):
+    autor_id = serializers.IntegerField(source="id_usuario.id_usuario", read_only=True)
+    autor_nombre = serializers.CharField(source="id_usuario.nombre_completo", read_only=True)
+    autor_username = serializers.CharField(source="id_usuario.username", read_only=True)
+    autor_foto = serializers.CharField(source="id_usuario.foto_url", read_only=True)
+
+    class Meta:
+        model = CommunityMessage
+        fields = [
+            "id_mensaje",
+            "autor_id",
+            "autor_nombre",
+            "autor_username",
+            "autor_foto",
+            "content",
+            "category",
+            "match_date",
+            "spots_needed",
+            "created_at",
+        ]
+        read_only_fields = ["id_mensaje", "autor_id", "created_at"]
+
+
+class MensajePrivadoSerializer(serializers.ModelSerializer):
+    remitente_nombre = serializers.CharField(source="id_remitente.nombre_completo", read_only=True)
+    destinatario_nombre = serializers.CharField(source="id_destinatario.nombre_completo", read_only=True)
+
+    class Meta:
+        model = MensajePrivado
+        fields = [
+            "id_mensaje_privado",
+            "id_remitente",
+            "id_destinatario",
+            "remitente_nombre",
+            "destinatario_nombre",
+            "contenido",
+            "fecha_envio",
+            "leido",
+        ]
+        read_only_fields = ["id_remitente", "fecha_envio", "leido"]

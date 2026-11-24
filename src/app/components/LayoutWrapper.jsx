@@ -4,22 +4,40 @@ import { usePathname } from "next/navigation";
 
 import NavBarWrapper from "./publico/NavBarWrapper";
 import ChatButton from "./publico/CHAT/ChatButton";
+import Footer from "./publico/Footer";
+import BotonFlotanteComunidad from "./publico/BotonFlotanteComunidad";
 
 export default function LayoutWrapper({ children }) {
-
   const pathname = usePathname();
 
-  // Verificar si estamos dentro del módulo de árbitro
   const esArbitro = pathname.startsWith("/arbitro");
 
+  const rutasOcultas = [
+    "/",
+    "/login",
+    "/registro",
+    "/reset-password",
+    "/mapa",
+    "/mis-reservas",
+    "/dashboard",
+    "/admin",
+  ];
+
+  const ocultarFooter =
+    esArbitro ||
+    rutasOcultas.some(
+      (ruta) =>
+        pathname === ruta ||
+        (ruta !== "/" && pathname.startsWith(`${ruta}/`))
+    );
+
   return (
-
     <>
-
       {!esArbitro && (
         <>
           <NavBarWrapper />
           <ChatButton />
+          <BotonFlotanteComunidad />
         </>
       )}
 
@@ -27,8 +45,7 @@ export default function LayoutWrapper({ children }) {
         {children}
       </main>
 
+      {!ocultarFooter && <Footer />}
     </>
-
   );
-
 }
