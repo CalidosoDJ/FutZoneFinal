@@ -8,7 +8,7 @@ export default function NavBarWrapper() {
     const pathname = usePathname();
 
     const rutasOcultas = ["/login", "/register", "/", "/dashboard", "recuperar-password", "reset-password", "/admin", "/admin/usuarios",
-        "/admin/canchas", "/admin/reservas", "/admin/pagos", "/admin/torneos", "/admin/promociones",
+        "/admin/canchas", "/admin/reservas", "/admin/calendario", "/admin/pagos", "/admin/torneos", "/admin/promociones",
         "/admin/reportes", "/admin/perfil", "/admin/fixture", "/admin/final", "/admin/estadisticas",
         "/admin/configuracion", "/admin/estadisticas/torneos", "/admin/estadisticas/reservas",
         "/admin/estadisticas/pagos", "/admin/estadisticas/promociones"];

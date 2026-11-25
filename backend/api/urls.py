@@ -41,4 +41,4 @@ urlpatterns = [
     path("comunidad/", comunidad_mensajes, name="comunidad_mensajes"),
     path("chat/<int:usuario_id>/", chat_privado, name="chat_privado"),
     path("", include(router.urls)),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

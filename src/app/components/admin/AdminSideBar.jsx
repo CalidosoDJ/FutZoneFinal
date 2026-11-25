@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 // icons
-import { LayoutDashboard, Users, CalendarDays, MapPinned, CreditCard, Trophy, Gift, BarChart3, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, MapPinned, CreditCard, Trophy, Gift, BarChart3, Settings, LogOut, CalendarRange } from "lucide-react";
 
 export default function AdminSidebar() {
     const pathname = usePathname();
@@ -30,6 +30,11 @@ export default function AdminSidebar() {
             nombre: "Reservas",
             ruta: "/admin/reservas",
             icono: CalendarDays
+        },
+        {
+            nombre: "Calendario",
+            ruta: "/admin/calendario",
+            icono: CalendarRange,
         },
         {
             nombre: "Pagos",

@@ -8,16 +8,16 @@ export default function PagarReservaModal({
   mostrarModal,
   setMostrarModal,
   reservaSeleccionada,
-  onPagoExitoso
+  onPagoExitoso,
 }) {
   const [metodo, setMetodo] = useState("Nequi");
   const [referenciaNequi, setReferenciaNequi] = useState("");
-  const [comprobante, setComprobante] = useState("");
+  const [archivoComprobante, setArchivoComprobante] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   if (!mostrarModal || !reservaSeleccionada) return null;
 
-  // Generar referencia única de pago
   const generarReferencia = () => {
     const fecha = new Date();
     const codigo = Math.floor(1000 + Math.random() * 9000);
@@ -26,13 +26,12 @@ export default function PagarReservaModal({
 
   const referenciaSistema = generarReferencia();
 
-  // Calcular valor de la reserva
   const valorReserva = Number(
     reservaSeleccionada.total ||
     reservaSeleccionada.precio_total ||
     reservaSeleccionada.valor_total ||
     reservaSeleccionada.valor ||
-    50000 // Valor por defecto en caso de que venga limpio
+    50000
   );
 
   const cargarComprobante = (e) => {
@@ -51,11 +50,12 @@ export default function PagarReservaModal({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setComprobante(reader.result);
-    };
-    reader.readAsDataURL(archivo);
+    setArchivoComprobante(archivo);
+    if (archivo.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(archivo));
+    } else {
+      setPreviewUrl("PDF");
+    }
   };
 
   const confirmarPago = async () => {
@@ -64,7 +64,7 @@ export default function PagarReservaModal({
         alert("Por favor ingresa la referencia de la transacción de Nequi.");
         return;
       }
-      if (!comprobante) {
+      if (!archivoComprobante) {
         alert("Por favor adjunta el comprobante de pago.");
         return;
       }
@@ -72,55 +72,53 @@ export default function PagarReservaModal({
 
     setEnviando(true);
     const idReserva = reservaSeleccionada.id_reserva || reservaSeleccionada.id;
-    const estadoNuevo = metodo === "Nequi" ? "Pendiente" : "Confirmada";
 
     try {
-      const datosPago = {
-        id_reserva: idReserva,
-        valor: valorReserva,
-        metodo: metodo,
-        referenciaSistema,
-        referenciaNequi: metodo === "Nequi" ? referenciaNequi : "EFECTIVO",
-        comprobante: metodo === "Nequi" ? comprobante : null,
-        estado: metodo === "Nequi" ? "Pendiente" : "Pagado",
-        fechaRegistro: new Date().toISOString(),
-      };
+      const formData = new FormData();
+      formData.append("id_reserva", idReserva);
+      formData.append("monto", valorReserva);
+      formData.append("metodo_pago", metodo);
+      if (metodo === "Nequi" && archivoComprobante) {
+        formData.append("comprobante", archivoComprobante);
+      }
 
-      // 1. Registrar pago en Django (/api/pagos/)
-      await fetch("http://127.0.0.1:8000/api/pagos/", {
+      const res = await fetch("http://127.0.0.1:8000/api/pagos/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_reserva: idReserva,
-          monto: valorReserva,
-          metodo_pago: metodo,
-          referencia: metodo === "Nequi" ? referenciaNequi : referenciaSistema,
-          estado: metodo === "Nequi" ? "Pendiente" : "Pagado",
-        }),
-      }).catch(() => null);
+        body: formData,
+      });
 
-      // 2. Actualizar el estado de la reserva en Django (/api/reservas/<id>/)
-      await fetch(`http://127.0.0.1:8000/api/reservas/${idReserva}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estado: estadoNuevo }),
-      }).catch(() => null);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "No se pudo registrar el pago en el servidor.");
+      }
 
-      // 3. Respaldo en localStorage
-      const pagosAnteriores = JSON.parse(localStorage.getItem("pagos") || "[]");
-      localStorage.setItem("pagos", JSON.stringify([...pagosAnteriores, datosPago]));
+      const pagoCreado = await res.json();
+
+      // Solo guardamos texto ligero (referencias), nunca la imagen
+      if (metodo === "Nequi") {
+        try {
+          const refsLocales = JSON.parse(localStorage.getItem("referenciasPagos") || "{}");
+          refsLocales[pagoCreado.id_pago] = {
+            referenciaSistema,
+            referenciaNequi,
+          };
+          localStorage.setItem("referenciasPagos", JSON.stringify(refsLocales));
+        } catch {
+          // Si localStorage estuviera lleno, no bloquea el pago
+        }
+      }
 
       alert(
         metodo === "Nequi"
           ? "¡Comprobante enviado con éxito! Quedará aprobado tras la verificación del administrador."
-          : "¡Reserva registrada para pago en efectivo en sede!"
+          : "¡Reserva confirmada para pago en efectivo en sede!"
       );
 
-      if (onPagoExitoso) onPagoExitoso(datosPago);
+      if (onPagoExitoso) onPagoExitoso(pagoCreado);
       setMostrarModal(false);
     } catch (err) {
       console.error("Error al procesar el pago:", err);
-      alert("Hubo un error al registrar el pago.");
+      alert(err.message || "Hubo un error al registrar el pago.");
     } finally {
       setEnviando(false);
     }
@@ -129,12 +127,13 @@ export default function PagarReservaModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex justify-center items-center p-4 z-50 text-slate-700 animate-in fade-in">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto flex flex-col">
-
         {/* Cabecera */}
         <div className="flex justify-between items-center border-b p-6 bg-emerald-600 text-white">
           <div>
             <h2 className="text-xl md:text-2xl font-black">Pasarela de Pago FutZone</h2>
-            <p className="text-xs text-emerald-100 font-medium">Reserva #{reservaSeleccionada.id_reserva || reservaSeleccionada.id}</p>
+            <p className="text-xs text-emerald-100 font-medium">
+              Reserva #{reservaSeleccionada.id_reserva || reservaSeleccionada.id}
+            </p>
           </div>
           <button
             type="button"
@@ -147,13 +146,15 @@ export default function PagarReservaModal({
 
         {/* Cuerpo del Modal */}
         <div className="p-6 space-y-6">
-
           {/* Resumen de la Reserva */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs sm:text-sm">
             <div className="flex justify-between">
               <span className="text-slate-500">Cancha:</span>
               <span className="font-bold text-slate-800">
-                {reservaSeleccionada.cancha?.nombre_cancha || reservaSeleccionada.nombre_cancha || "Cancha FutZone"}
+                {reservaSeleccionada.cancha?.nombre_cancha ||
+                  reservaSeleccionada.cancha?.nombre ||
+                  reservaSeleccionada.nombre_cancha ||
+                  "Cancha FutZone"}
               </span>
             </div>
             <div className="flex justify-between">
@@ -172,14 +173,16 @@ export default function PagarReservaModal({
 
           {/* Selección de Método */}
           <div>
-            <label className="font-bold text-sm text-slate-800 block mb-3">Selecciona el Método de Pago</label>
+            <label className="font-bold text-sm text-slate-800 block mb-3">
+              Selecciona el Método de Pago
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setMetodo("Nequi")}
                 className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${metodo === "Nequi"
-                  ? "border-emerald-600 bg-emerald-50/60 text-emerald-800 font-bold shadow-xs"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    ? "border-emerald-600 bg-emerald-50/60 text-emerald-800 font-bold shadow-xs"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
               >
                 <FaQrcode size={22} className="text-emerald-600" />
@@ -190,8 +193,8 @@ export default function PagarReservaModal({
                 type="button"
                 onClick={() => setMetodo("Efectivo")}
                 className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${metodo === "Efectivo"
-                  ? "border-emerald-600 bg-emerald-50/60 text-emerald-800 font-bold shadow-xs"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    ? "border-emerald-600 bg-emerald-50/60 text-emerald-800 font-bold shadow-xs"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
               >
                 <FaMoneyBillWave size={22} className="text-emerald-600" />
@@ -203,7 +206,9 @@ export default function PagarReservaModal({
           {/* Si elige Nequi */}
           {metodo === "Nequi" && (
             <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 space-y-4 animate-in fade-in">
-              <h3 className="text-sm font-bold text-emerald-900 text-center">Escanea el código QR o transfiere al número indicado</h3>
+              <h3 className="text-sm font-bold text-emerald-900 text-center">
+                Escanea el código QR o transfiere al número indicado
+              </h3>
 
               <div className="flex justify-center">
                 <Image
@@ -216,13 +221,26 @@ export default function PagarReservaModal({
               </div>
 
               <div className="bg-white p-3.5 rounded-xl border border-emerald-100 space-y-1.5 text-xs">
-                <p><strong>Número Nequi:</strong> <span className="text-emerald-800 font-bold">3106021273</span></p>
-                <p><strong>Monto exacto:</strong> <span className="text-emerald-800 font-bold">${valorReserva.toLocaleString("es-CO")}</span></p>
-                <p><strong>Ref. Interna:</strong> <span className="text-emerald-700 font-bold">{referenciaSistema}</span></p>
+                <p>
+                  <strong>Número Nequi:</strong>{" "}
+                  <span className="text-emerald-800 font-bold">3106021273</span>
+                </p>
+                <p>
+                  <strong>Monto exacto:</strong>{" "}
+                  <span className="text-emerald-800 font-bold">
+                    ${valorReserva.toLocaleString("es-CO")}
+                  </span>
+                </p>
+                <p>
+                  <strong>Ref. Interna:</strong>{" "}
+                  <span className="text-emerald-700 font-bold">{referenciaSistema}</span>
+                </p>
               </div>
 
               <div>
-                <label className="font-bold text-xs text-slate-700 block mb-1">Número o ID de comprobante Nequi</label>
+                <label className="font-bold text-xs text-slate-700 block mb-1">
+                  Número o ID de comprobante Nequi
+                </label>
                 <input
                   type="text"
                   placeholder="Ej: 985632147"
@@ -233,7 +251,9 @@ export default function PagarReservaModal({
               </div>
 
               <div>
-                <label className="font-bold text-xs text-slate-700 block mb-1">Adjuntar captura del comprobante</label>
+                <label className="font-bold text-xs text-slate-700 block mb-1">
+                  Adjuntar captura del comprobante
+                </label>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,application/pdf"
@@ -242,9 +262,18 @@ export default function PagarReservaModal({
                 />
               </div>
 
-              {comprobante && (
-                <div className="text-xs text-emerald-700 font-semibold bg-white p-2.5 rounded-xl border border-emerald-100 text-center">
-                  ✅ Comprobante adjuntado correctamente
+              {previewUrl && (
+                <div className="space-y-2 text-center">
+                  <p className="text-xs text-emerald-700 font-semibold">
+                    ✅ Comprobante listo para enviar
+                  </p>
+                  {previewUrl !== "PDF" && (
+                    <img
+                      src={previewUrl}
+                      alt="Vista previa comprobante"
+                      className="mx-auto max-h-40 rounded-xl border border-emerald-200 shadow-xs"
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -253,10 +282,11 @@ export default function PagarReservaModal({
           {metodo === "Efectivo" && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 space-y-1">
               <p className="font-bold">💡 Nota importante:</p>
-              <p>Tu reserva quedará registrada como pendiente de pago presencial. Debes cancelar el valor directamente en la sede antes de ingresar a la cancha.</p>
+              <p>
+                Tu reserva quedará registrada como confirmada para pago presencial. Debes cancelar el valor directamente en la sede antes de ingresar a la cancha.
+              </p>
             </div>
           )}
-
         </div>
 
         {/* Pie del Modal */}
@@ -274,10 +304,13 @@ export default function PagarReservaModal({
             onClick={confirmarPago}
             className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm disabled:opacity-50 cursor-pointer transition flex items-center justify-center"
           >
-            {enviando ? "Procesando..." : metodo === "Nequi" ? "Enviar Comprobante" : "Confirmar Reserva"}
+            {enviando
+              ? "Procesando..."
+              : metodo === "Nequi"
+                ? "Enviar Comprobante"
+                : "Confirmar Reserva"}
           </button>
         </div>
-
       </div>
     </div>
   );

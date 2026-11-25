@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,19 +7,21 @@ import { FaTimes } from "react-icons/fa";
 const API_RESERVAS = "http://127.0.0.1:8000/api/reservas/";
 const API_USUARIOS = "http://127.0.0.1:8000/api/usuarios/";
 const API_CANCHAS = "http://127.0.0.1:8000/api/canchas/";
+const API_PAGOS = "http://127.0.0.1:8000/api/pagos/";
 
 export default function PagoModal({
     mostrarModal,
     setMostrarModal,
     formulario,
     setFormulario,
-    pagos,
-    setPagos,
+    onPagoCreado,
 }) {
     const [reservas, setReservas] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
     const [canchas, setCanchas] = useState([]);
+    const [archivoComprobante, setArchivoComprobante] = useState(null);
     const [cargando, setCargando] = useState(false);
+    const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
 
     const generarReferencia = () => {
@@ -29,14 +30,13 @@ export default function PagoModal({
 
         return `FTZ-${fecha.getFullYear()}${String(
             fecha.getMonth() + 1
-        ).padStart(2, "0")}${String(
-            fecha.getDate()
-        ).padStart(2, "0")}-${codigo}`;
+        ).padStart(2, "0")}${String(fecha.getDate()).padStart(2, "0")}-${codigo}`;
     };
 
     // Cargar reservas, usuarios y canchas desde Django
     useEffect(() => {
         if (!mostrarModal) return;
+        setArchivoComprobante(null);
 
         const cargarDatos = async () => {
             setCargando(true);
@@ -55,28 +55,15 @@ export default function PagoModal({
                     );
                 }
 
-                const [datosRes, datosUsu, datosCan] =
-                    await Promise.all([
-                        resRes.json(),
-                        resUsu.json(),
-                        resCan.json(),
-                    ]);
+                const [datosRes, datosUsu, datosCan] = await Promise.all([
+                    resRes.json(),
+                    resUsu.json(),
+                    resCan.json(),
+                ]);
 
-                const listaReservas = Array.isArray(datosRes)
-                    ? datosRes
-                    : datosRes.results || [];
-
-                const listaUsuarios = Array.isArray(datosUsu)
-                    ? datosUsu
-                    : datosUsu.results || [];
-
-                const listaCanchas = Array.isArray(datosCan)
-                    ? datosCan
-                    : datosCan.results || [];
-
-                setReservas(listaReservas);
-                setUsuarios(listaUsuarios);
-                setCanchas(listaCanchas);
+                setReservas(Array.isArray(datosRes) ? datosRes : datosRes.results || []);
+                setUsuarios(Array.isArray(datosUsu) ? datosUsu : datosUsu.results || []);
+                setCanchas(Array.isArray(datosCan) ? datosCan : datosCan.results || []);
             } catch (error) {
                 console.error("Error cargando reservas:", error);
                 setError(
@@ -100,12 +87,9 @@ export default function PagoModal({
         }
     }, [mostrarModal, formulario.referenciaSistema, setFormulario]);
 
-    // Obtener cliente relacionado con una reserva
     const obtenerCliente = (reserva) => {
         const usuarioRelacionado =
-            reserva.usuario ??
-            reserva.id_usuario ??
-            reserva.cliente;
+            reserva.usuario ?? reserva.id_usuario ?? reserva.cliente;
 
         if (usuarioRelacionado && typeof usuarioRelacionado === "object") {
             return (
@@ -118,25 +102,20 @@ export default function PagoModal({
         }
 
         const usuario = usuarios.find(
-            (u) =>
-                String(u.id_usuario ?? u.id) ===
-                String(usuarioRelacionado)
+            (u) => String(u.id_usuario ?? u.id) === String(usuarioRelacionado)
         );
 
         return usuario
             ? usuario.nombre_completo ||
-                  usuario.nombre ||
-                  usuario.username ||
-                  usuario.email ||
-                  "Cliente"
+            usuario.nombre ||
+            usuario.username ||
+            usuario.email ||
+            "Cliente"
             : "Cliente";
     };
 
-    // Obtener cancha relacionada con una reserva
     const obtenerCancha = (reserva) => {
-        const canchaRelacionada =
-            reserva.cancha ??
-            reserva.id_cancha;
+        const canchaRelacionada = reserva.cancha ?? reserva.id_cancha;
 
         if (canchaRelacionada && typeof canchaRelacionada === "object") {
             return (
@@ -147,9 +126,7 @@ export default function PagoModal({
         }
 
         const cancha = canchas.find(
-            (c) =>
-                String(c.id_cancha ?? c.id) ===
-                String(canchaRelacionada)
+            (c) => String(c.id_cancha ?? c.id) === String(canchaRelacionada)
         );
 
         return cancha
@@ -162,10 +139,8 @@ export default function PagoModal({
             reserva.cancha && typeof reserva.cancha === "object"
                 ? reserva.cancha
                 : canchas.find(
-                      (c) =>
-                          String(c.id_cancha ?? c.id) ===
-                          String(reserva.id_cancha)
-                  );
+                    (c) => String(c.id_cancha ?? c.id) === String(reserva.id_cancha)
+                );
 
         return Number(
             reserva.total ??
@@ -180,11 +155,7 @@ export default function PagoModal({
     };
 
     const obtenerFecha = (reserva) => {
-        return (
-            reserva.fecha_reserva ||
-            reserva.fecha ||
-            ""
-        );
+        return reserva.fecha_reserva || reserva.fecha || "";
     };
 
     const obtenerIdReserva = (reserva) => {
@@ -220,15 +191,9 @@ export default function PagoModal({
 
     const cargarComprobante = (e) => {
         const archivo = e.target.files?.[0];
-
         if (!archivo) return;
 
-        const tiposPermitidos = [
-            "image/jpeg",
-            "image/png",
-            "application/pdf",
-        ];
-
+        const tiposPermitidos = ["image/jpeg", "image/png", "application/pdf"];
         if (!tiposPermitidos.includes(archivo.type)) {
             alert("Solo se permiten archivos JPG, PNG o PDF.");
             e.target.value = "";
@@ -241,64 +206,84 @@ export default function PagoModal({
             return;
         }
 
-        const reader = new FileReader();
+        setArchivoComprobante(archivo);
 
+        const reader = new FileReader();
         reader.onload = () => {
             setFormulario((prev) => ({
                 ...prev,
                 comprobante: reader.result,
             }));
         };
-
         reader.readAsDataURL(archivo);
     };
 
-    const guardarPago = () => {
+    const guardarPago = async () => {
         if (!formulario.idReserva) {
             alert("Selecciona una reserva.");
             return;
         }
 
-        if (
-            formulario.metodo === "Nequi" &&
-            !formulario.comprobante
-        ) {
+        if (formulario.metodo === "Nequi" && !archivoComprobante) {
             alert("Adjunta el comprobante de Nequi.");
             return;
         }
 
-        if (
-            formulario.metodo === "Nequi" &&
-            !formulario.referenciaNequi.trim()
-        ) {
+        if (formulario.metodo === "Nequi" && !formulario.referenciaNequi.trim()) {
             alert("Escribe la referencia de la transacción de Nequi.");
             return;
         }
 
-        const nuevoPago = {
-            ...formulario,
-            estado:
+        setGuardando(true);
+        try {
+            const formData = new FormData();
+            formData.append("id_reserva", formulario.idReserva);
+            formData.append("monto", formulario.valor);
+            formData.append("metodo_pago", formulario.metodo);
+
+            if (formulario.metodo === "Nequi" && archivoComprobante) {
+                formData.append("comprobante", archivoComprobante);
+            }
+
+            const res = await fetch(API_PAGOS, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(
+                    errData.detail || "No se pudo registrar el pago en Django."
+                );
+            }
+
+            const pagoCreado = await res.json();
+
+            if (formulario.metodo === "Nequi") {
+                const refsLocales = JSON.parse(
+                    localStorage.getItem("referenciasPagos") || "{}"
+                );
+                refsLocales[pagoCreado.id_pago] = {
+                    referenciaSistema: formulario.referenciaSistema,
+                    referenciaNequi: formulario.referenciaNequi,
+                };
+                localStorage.setItem("referenciasPagos", JSON.stringify(refsLocales));
+            }
+
+            alert(
                 formulario.metodo === "Nequi"
-                    ? "Pendiente"
-                    : "Pagado",
-            id: Date.now(),
-            fechaRegistro: new Date().toISOString(),
-        };
+                    ? "Comprobante registrado. El pago está pendiente de verificación."
+                    : "Pago en efectivo registrado y reserva confirmada."
+            );
 
-        const nuevosPagos = [...pagos, nuevoPago];
-
-        setPagos(nuevosPagos);
-
-        // Temporal: el pago todavía se almacena en localStorage.
-        localStorage.setItem("pagos", JSON.stringify(nuevosPagos));
-
-        alert(
-            formulario.metodo === "Nequi"
-                ? "Comprobante registrado. El pago está pendiente de verificación."
-                : "Pago registrado."
-        );
-
-        setMostrarModal(false);
+            if (onPagoCreado) await onPagoCreado();
+            setMostrarModal(false);
+        } catch (err) {
+            console.error("Error guardando pago:", err);
+            alert(err.message || "Error al guardar el pago.");
+        } finally {
+            setGuardando(false);
+        }
     };
 
     if (!mostrarModal) return null;
@@ -307,54 +292,39 @@ export default function PagoModal({
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center p-4 z-50 text-gray-700">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center border-b p-6 bg-green-600 text-white">
-                    <h2 className="text-2xl md:text-3xl font-bold">
-                        Registrar Pago
-                    </h2>
+                    <h2 className="text-2xl md:text-3xl font-bold">Registrar Pago</h2>
 
                     <button
                         type="button"
                         onClick={() => setMostrarModal(false)}
+                        className="cursor-pointer"
                     >
                         <FaTimes size={22} />
                     </button>
                 </div>
 
                 <div className="p-6">
-                    <label className="font-semibold">
-                        Reserva
-                    </label>
+                    <label className="font-semibold">Reserva</label>
 
                     <select
                         value={formulario.idReserva || ""}
-                        onChange={(e) =>
-                            seleccionarReserva(e.target.value)
-                        }
+                        onChange={(e) => seleccionarReserva(e.target.value)}
                         className="w-full border rounded-xl p-3 mt-2 mb-4"
                         disabled={cargando}
                     >
                         <option value="">
-                            {cargando
-                                ? "Cargando reservas..."
-                                : "Seleccione una reserva"}
+                            {cargando ? "Cargando reservas..." : "Seleccione una reserva"}
                         </option>
 
                         {reservas.map((r) => (
-                            <option
-                                key={obtenerIdReserva(r)}
-                                value={obtenerIdReserva(r)}
-                            >
-                                Reserva #{obtenerIdReserva(r)} —{" "}
-                                {obtenerCliente(r)} —{" "}
+                            <option key={obtenerIdReserva(r)} value={obtenerIdReserva(r)}>
+                                Reserva #{obtenerIdReserva(r)} — {obtenerCliente(r)} —{" "}
                                 {obtenerCancha(r)}
                             </option>
                         ))}
                     </select>
 
-                    {error && (
-                        <p className="text-red-600 mb-4">
-                            {error}
-                        </p>
-                    )}
+                    {error && <p className="text-red-600 mb-4">{error}</p>}
 
                     {!cargando && !error && reservas.length === 0 && (
                         <p className="text-amber-700 mb-4">
@@ -385,9 +355,7 @@ export default function PagoModal({
                             <label>Valor</label>
                             <input
                                 readOnly
-                                value={`$${Number(
-                                    formulario.valor || 0
-                                ).toLocaleString("es-CO")}`}
+                                value={`$${Number(formulario.valor || 0).toLocaleString("es-CO")}`}
                                 className="w-full border rounded-xl p-3 mt-2 bg-gray-100"
                             />
                         </div>
@@ -403,12 +371,10 @@ export default function PagoModal({
                     </div>
 
                     <div className="mt-8">
-                        <label className="font-semibold text-lg">
-                            Método de Pago
-                        </label>
+                        <label className="font-semibold text-lg">Método de Pago</label>
 
                         <div className="flex gap-10 mt-4">
-                            <label className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="radio"
                                     checked={formulario.metodo === "Efectivo"}
@@ -422,7 +388,7 @@ export default function PagoModal({
                                 Efectivo
                             </label>
 
-                            <label className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="radio"
                                     checked={formulario.metodo === "Nequi"}
@@ -456,15 +422,12 @@ export default function PagoModal({
 
                             <div className="mt-6 space-y-3">
                                 <p>
-                                    <strong>Número Nequi:</strong>{" "}
-                                    3106021273
+                                    <strong>Número Nequi:</strong> 3106021273
                                 </p>
 
                                 <p>
-                                    <strong>Valor a pagar:</strong>{" "}
-                                    ${Number(
-                                        formulario.valor || 0
-                                    ).toLocaleString("es-CO")}
+                                    <strong>Valor a pagar:</strong> $
+                                    {Number(formulario.valor || 0).toLocaleString("es-CO")}
                                 </p>
 
                                 <p>
@@ -495,9 +458,7 @@ export default function PagoModal({
                             </div>
 
                             <div className="mt-6">
-                                <label className="font-semibold">
-                                    Adjuntar comprobante
-                                </label>
+                                <label className="font-semibold">Adjuntar comprobante</label>
 
                                 <input
                                     type="file"
@@ -509,13 +470,9 @@ export default function PagoModal({
 
                             {formulario.comprobante && (
                                 <div className="mt-6">
-                                    <p className="font-semibold mb-3">
-                                        Vista previa
-                                    </p>
+                                    <p className="font-semibold mb-3">Vista previa</p>
 
-                                    {formulario.comprobante.startsWith(
-                                        "data:image"
-                                    ) ? (
+                                    {formulario.comprobante.startsWith("data:image") ? (
                                         <img
                                             src={formulario.comprobante}
                                             alt="Comprobante"
@@ -536,7 +493,7 @@ export default function PagoModal({
                     <button
                         type="button"
                         onClick={() => setMostrarModal(false)}
-                        className="px-6 py-3 rounded-xl bg-gray-300 hover:bg-gray-400"
+                        className="px-6 py-3 rounded-xl bg-gray-300 hover:bg-gray-400 cursor-pointer"
                     >
                         Cancelar
                     </button>
@@ -544,12 +501,14 @@ export default function PagoModal({
                     <button
                         type="button"
                         onClick={guardarPago}
-                        disabled={cargando || reservas.length === 0}
-                        className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50"
+                        disabled={cargando || guardando || reservas.length === 0}
+                        className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50 cursor-pointer"
                     >
-                        {formulario.metodo === "Nequi"
-                            ? "Enviar comprobante"
-                            : "Registrar Pago"}
+                        {guardando
+                            ? "Guardando..."
+                            : formulario.metodo === "Nequi"
+                                ? "Enviar comprobante"
+                                : "Registrar Pago"}
                     </button>
                 </div>
             </div>

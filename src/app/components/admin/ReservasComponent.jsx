@@ -399,9 +399,26 @@ export default function ReservasComponent() {
                     </td>
 
                     <td>
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {reserva.estado || "Registrada"}
-                      </span>
+                      {(() => {
+                        const est = String(reserva.estado || "pendiente").toLowerCase();
+                        const clases =
+                          est === "confirmada" || est === "pagada"
+                            ? "bg-green-100 text-green-700"
+                            : est === "pendiente"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700";
+
+                        const etiqueta =
+                          est.charAt(0).toUpperCase() + est.slice(1);
+
+                        return (
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${clases}`}
+                          >
+                            {etiqueta}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     <td className="p-4">

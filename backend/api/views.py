@@ -57,10 +57,17 @@ def crear_notificacion(usuario, titulo, mensaje, tipo="sistema", referencia=None
         leido=0,
         fecha_envio=timezone.now(),
     )
+    
+import os
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 class PagoViewSet(viewsets.ModelViewSet):
     serializer_class = PagoSerializer
     permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     queryset = Pagos.objects.select_related(
         "id_reserva",
@@ -70,14 +77,29 @@ class PagoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         metodo = serializer.validated_data["metodo_pago"]
-        estado_inicial = (
-            "Pendiente" if metodo == "Nequi" else "Pagado"
-        )
+        estado_inicial = "Pendiente" if metodo == "Nequi" else "Pagado"
+
+        comprobante_url = serializer.validated_data.get("comprobante_url", "")
+        archivo = self.request.FILES.get("comprobante")
+
+        if archivo:
+            ext = os.path.splitext(archivo.name)[1] or ".jpg"
+            nombre_archivo = f"comprobantes/pago_{int(timezone.now().timestamp())}{ext}"
+            ruta_guardada = default_storage.save(nombre_archivo, ContentFile(archivo.read()))
+            comprobante_url = f"/media/{ruta_guardada}"
 
         pago = serializer.save(
             estado=estado_inicial,
             fecha_pago=timezone.now(),
+            comprobante_url=comprobante_url,
         )
+
+        # Actualizar estado de la reserva según el método
+        if metodo != "Nequi":
+            pago.id_reserva.estado = "Confirmada"
+        else:
+            pago.id_reserva.estado = "Pendiente"
+        pago.id_reserva.save(update_fields=["estado"])
 
         usuario = pago.id_reserva.id_usuario
         cancha = pago.id_reserva.id_cancha
@@ -106,6 +128,9 @@ class PagoViewSet(viewsets.ModelViewSet):
 
         pago.estado = "Pagado"
         pago.save(update_fields=["estado"])
+
+        pago.id_reserva.estado = "Confirmada"
+        pago.id_reserva.save(update_fields=["estado"])
 
         crear_notificacion(
             usuario=pago.id_reserva.id_usuario,
@@ -136,6 +161,9 @@ class PagoViewSet(viewsets.ModelViewSet):
 
         pago.estado = "Rechazado"
         pago.save(update_fields=["estado"])
+
+        pago.id_reserva.estado = "Pendiente"
+        pago.id_reserva.save(update_fields=["estado"])
 
         crear_notificacion(
             usuario=pago.id_reserva.id_usuario,
